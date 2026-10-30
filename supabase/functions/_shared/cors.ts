@@ -6,4 +6,4 @@ export const cors = {
 }
 
 export const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } })
+  new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json', 'cache-control': 'no-store' } })

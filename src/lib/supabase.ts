@@ -28,6 +28,7 @@ export interface StoreRow {
   bsb: string
   account: string
   active: boolean
+  password_set_at: string | null
 }
 
 export interface PaymentRow {
@@ -57,7 +58,7 @@ export const demoStores = (): StoreRow[] =>
     id: 'demo-' + i, ...s, email: i < 3 ? s.code.toLowerCase() + '@hsw.com.au' : null,
     owner_email: i < 3 ? 'owner.' + s.code.toLowerCase() + '@example.com' : null,
     legal_name: i < 3 ? 'Demo Pty Ltd t/a Howards Storage World' : '', abn: i < 3 ? '12 345 678 901' : '',
-    bank_name: '', bsb: '', account: '', active: true,
+    bank_name: '', bsb: '', account: '', active: true, password_set_at: i < 3 ? new Date().toISOString() : null,
   }))
 const dayAgo = (n: number) => new Date(Date.now() - n * 864e5)
 export const demoDocs = (): DocRow[] => [

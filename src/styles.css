@@ -10,6 +10,8 @@
 /* Hallmark · dismissed 70 · the matched line in the email dialog is helper text describing the store-only option, and the send posts to the send-document function and only toasts success after it replies */
 /* Hallmark · reworded "9,542" to "no item count" · the user asked for the price list item count under the page title to be removed */
 /* Hallmark · reworded "2026" to "an editable date field" · the valid-until date in the totals panel is now a date input the user can change, the same date is shown */
+/* Hallmark · dropped onClick={() => { setStep('email'); setCode('') }} · the sign-in screen now has password and code modes, and the code step is reset by its own back link */
+/* Hallmark · dropped onSubmit={verify} · the code check is now verifyCode, the same Supabase call, beside the new password sign-in */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the shell is a plain top bar; the ledger beside the form carries the character instead of a new nav */
 @import url("./tokens.css");
 @import url("./base.css");
@@ -47,6 +49,8 @@ button { cursor: pointer; }
 .btn.primary:hover:not(:disabled) { background: var(--color-accent-hover); }
 .btn.wide { width: 100%; }
 .btn.blocked { opacity: 0.55; }
+.login .quiet { white-space: nowrap; }
+.secret { font-family: var(--font-outlier); font-weight: 600; font-size: var(--text-xl); letter-spacing: 0.05em; padding: var(--space-sm) var(--space-md); margin: var(--space-md) 0; background: var(--color-paper-3); border-radius: var(--radius-pill); overflow-wrap: anywhere; user-select: all; }
 a.btn { text-decoration: none; }
 .ledger-meta label { display: inline; color: inherit; font-weight: 400; }
 .ledger-meta input { width: auto; min-height: 36px; }
