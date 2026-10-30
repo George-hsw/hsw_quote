@@ -1,0 +1,17 @@
+project_id = "hsw-quote"
+
+[auth]
+enable_signup = false          # users are created only by the request-code function
+
+[auth.email]
+otp_length = 6
+otp_expiry = 600
+
+[functions.request-code]
+verify_jwt = false             # called before login
+
+[functions.send-document]
+verify_jwt = false             # checks the user token itself (getUser)
+
+[functions.record-payment]
+verify_jwt = false             # checks the user token itself (getUser) so it can return clean errors

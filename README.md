@@ -1,0 +1,77 @@
+# HSW Quote & Invoice Builder
+
+Web version of `HSW_Quote_Invoice_Builder.xlsx`. Staff sign in with their store email, build a Quote or Tax Invoice
+(scan or search items), download the PDF, and record deposits/payments. Each payment emails the franchise owner.
+
+Money rules match the workbook: prices include GST, GST = total ÷ 11, line = qty × price × (1 − disc%), blank qty = 1,
+numbers `Q-<STORE>-<n>` / `INV-<STORE>-<n>`, quote valid 30 days, invoice due 7 days (or a chosen date).
+
+## Who can do what
+| | Store login | Admin (`george.mridun@hsw.com.au`) |
+|---|---|---|
+| Sign in | emailed 6-digit code to the store's login email | same |
+| Quotes / invoices | own store only | all stores |
+| Record payment / deposit | own store | any store |
+| Manage stores, emails, ABN, bank | no | yes (max 25 active stores) |
+
+Enforced by Row Level Security in `supabase/migrations/002_*.sql`, not just the UI. Payments can only be written by the
+`record-payment` edge function. Once an invoice has a payment it is frozen.
+
+## Data flow
+```
+Dynamics / LS Central --(Scheduler 1: sync-dynamics.yml, nightly, incremental)--> Supabase `items`
+Supabase `items` --(Scheduler 2: publish-prices.yml, after each sync + weekly)--> public/items.json committed to the repo --> Vercel redeploys --> app
+Store user --(record-payment function)--> payments table + email to the store's owner_email (Resend)
+Store user --(send-document function)--> the PDF emailed to the customer (copy + replies to the store) or to the store only
+```
+
+## Why the app reads a local copy of the prices
+
+The app never calls Dynamics or Supabase for prices. It loads `items.json`, a file that ships with the site. Prices change about once a month, so a fresh copy overnight is plenty, and:
+
+- **If Dynamics is down**, Scheduler 1 fails and changes nothing. Supabase keeps yesterday's prices.
+- **If Supabase is down**, Scheduler 2 fails and commits nothing. The repo keeps its last copy.
+- **If both are down**, the app still works, because the file is served by Vercel with the site itself.
+- Both schedulers refuse to replace the list with an empty or partial one (under 100 items).
+- The copy lives in git, so every price change is a commit you can see and, if ever needed, roll back.
+- GitHub emails the repo owner when a scheduled run fails.
+
+### Incremental refresh
+
+Scheduler 1 does not rewrite the catalogue each night. It fetches the item list, compares every item with what Supabase already holds (a fingerprint per item), and writes **only the items that are new or changed**. If nothing changed, nothing is written, Scheduler 2 finds no difference, and no commit or redeploy happens. Each run is recorded in `sync_log` (fetched, written, unchanged, removed).
+
+- **Full pass:** reads everything, so it also notices items that were removed in Dynamics. This is the default.
+- **Delta pass (optional):** if the web service has a "last modified" field, set the `DYN_MODIFIED_FIELD` variable (for example `Last_Date_Modified`) and the nightly run asks Dynamics only for items modified since the last run, with a full pass once a week. Check first that this field really changes when a price changes: in LS Central, prices often live in price tables and the item's own modified date may not move. If in doubt, leave it unset; the fingerprint comparison already keeps the writes minimal.
+- **Safety:** a full pass that returns under 100 items, or that would mark more than 20% of items as removed, is refused.
+
+Prices change in Dynamics, not in this app. To refresh sooner than overnight, run **Sync Dynamics → Supabase** from the Actions tab; the price copy updates right after it.
+
+## Setup
+1. **Supabase project**: Auth → Providers → Email: turn **off** "Allow new users to sign up". Edit the *Magic Link*/*OTP*
+   email template to include `{{ .Token }}`. Configure **custom SMTP** (Auth → SMTP) — the built-in sender is limited to a few emails/hour.
+2. **Vercel**: import the GitHub repo (framework Vite, no other settings). Project → Settings → Environment Variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (public by design), plus `VITE_ADOBE_FONTS_KIT` to turn on Myriad Pro (below). Vercel needs no service key: it deploys the committed price copy, and redeploys on every push.
+3. **GitHub repo secrets**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`,
+   `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`, `RESEND_API_KEY`, `MAIL_FROM` (e.g. `HSW Quotes <quotes@hsw.com.au>`, a Resend-verified domain),
+   and for Dynamics: `DYN_ODATA_URL` (the web service URL) plus the sign-in, which is **either** `DYN_USER` + `DYN_ACCESS_KEY` (a NAV user and its Web Service Access Key) **or** `DYN_TENANT_ID` + `DYN_CLIENT_ID` + `DYN_CLIENT_SECRET` (Business Central online).
+   Optional variables: `DYN_FILTER`, `DYN_FIELD_MAP`, `DYN_MODIFIED_FIELD`, `DYN_MODIFIED_FORMAT`.
+   **The server must be reachable from GitHub's servers over the internet** (an https address). If the NAV service is only on the internal network, the nightly job cannot reach it: use a self-hosted runner inside the network, or publish the service through a secure gateway.
+   Before the first sync, check the connection and the field names from your own computer:
+   `DYN_ODATA_URL=… DYN_USER=… DYN_ACCESS_KEY=… node scripts/sync-dynamics.mjs --discover`
+4. Run **Deploy Supabase** (creates tables, seeds the 23 stores, deploys the functions), then seed prices once:
+   `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/seed-supabase.mjs`.
+5. **Myriad Pro**: it is an Adobe font and cannot be bundled. In Adobe Fonts (fonts.adobe.com, included with Creative Cloud), add Myriad Pro to a web project with the Vercel domain, tick the weights Light, Regular, Semibold and Bold, then put the project id in `VITE_ADOBE_FONTS_KIT`. The app uses Myriad Pro Light for body text. Until then the app uses Source Sans 3, a close free match. The PDF uses Helvetica.
+6. Sign in as the admin → **Stores**: set each store's login email, franchise owner email, legal name, ABN and bank details.
+
+## Emailing quotes and invoices
+
+**Email PDF** on the New screen sends the PDF from the app, in the store's name, using the same Resend account as the payment notices:
+
+- *To the customer*: the PDF is attached, the store is copied (BCC) and replies go to the store's email.
+- *To the store only*: sent to the store's email so the store can forward it from its own Outlook.
+
+Every send is logged in `document_emails`, and each signed-in user is limited to 40 sends an hour.
+
+Setup: verify the sending domain in Resend (DNS records added by whoever manages the hsw.com.au DNS), and set the `MAIL_FROM` secret. The email shows as sent from that address but under the store's name; it does not appear in the store's Outlook Sent folder. Sending from the store's real mailbox is possible later through Microsoft Graph (Mail.Send application permission, restricted to the store mailboxes by an Exchange application access policy), which needs an Entra admin.
+
+## Develop
+`npm install` · `npm run dev` (needs `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` in `.env.local`) · `npm test` · `npm run build`

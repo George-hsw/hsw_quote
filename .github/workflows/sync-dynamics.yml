@@ -1,0 +1,49 @@
+name: Sync Dynamics → Supabase
+
+# Scheduler 1. Pulls the item list from the Dynamics web service into Supabase, incrementally:
+# only new or changed items are written, and a night with no changes writes nothing.
+# 17:00 UTC = 3am AEST / 4am AEDT. Change the cron to weekly if daily is more than you need,
+# e.g. '0 17 * * 0' (Sunday).
+on:
+  schedule:
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'auto (default), full (re-read everything and reconcile removals) or delta (only items modified since the last run)'
+        default: auto
+        type: choice
+        options: [auto, full, delta]
+
+concurrency:
+  group: sync-dynamics
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: node scripts/sync-dynamics.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DYN_ODATA_URL: ${{ secrets.DYN_ODATA_URL }}
+          # NAV web service access key (use these two)...
+          DYN_USER: ${{ secrets.DYN_USER }}
+          DYN_ACCESS_KEY: ${{ secrets.DYN_ACCESS_KEY }}
+          # ...or Business Central online with an Entra app (use these three)
+          DYN_TENANT_ID: ${{ secrets.DYN_TENANT_ID }}
+          DYN_CLIENT_ID: ${{ secrets.DYN_CLIENT_ID }}
+          DYN_CLIENT_SECRET: ${{ secrets.DYN_CLIENT_SECRET }}
+          DYN_FILTER: ${{ vars.DYN_FILTER }}
+          DYN_FIELD_MAP: ${{ vars.DYN_FIELD_MAP }}
+          DYN_MODIFIED_FIELD: ${{ vars.DYN_MODIFIED_FIELD }}
+          DYN_MODIFIED_FORMAT: ${{ vars.DYN_MODIFIED_FORMAT }}
+          SYNC_MODE: ${{ github.event.inputs.mode || 'auto' }}
