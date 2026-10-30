@@ -14,6 +14,10 @@ on:
         default: auto
         type: choice
         options: [auto, full, delta]
+      discover:
+        description: 'Tick to only print the Dynamics field names (no changes are made)'
+        default: false
+        type: boolean
 
 concurrency:
   group: sync-dynamics
@@ -30,7 +34,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node scripts/sync-dynamics.mjs
+      - run: node scripts/sync-dynamics.mjs ${{ github.event.inputs.discover == 'true' && '--discover' || '' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
