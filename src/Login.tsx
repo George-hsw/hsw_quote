@@ -25,7 +25,10 @@ export default function Login() {
     e.preventDefault()
     if (!supabase) return
     setBusy(true)
-    const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' })
+    const who = { email: email.trim().toLowerCase(), token: code.trim() }
+    // The code is minted as a magic-link token; Supabase accepts it as 'email', with 'magiclink' as the fallback.
+    let { error } = await supabase.auth.verifyOtp({ ...who, type: 'email' })
+    if (error) ({ error } = await supabase.auth.verifyOtp({ ...who, type: 'magiclink' }))
     setBusy(false)
     if (error) toast.error('That code is wrong or has expired.')
   }
