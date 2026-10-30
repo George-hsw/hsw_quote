@@ -162,6 +162,8 @@ async function main() {
     if (plan.toUpsert.length === 0 && plan.toRemove.length === 0) console.log('No changes in Dynamics. Nothing written.')
   } catch (e) {
     await finish({ ok: false, message: String(e.message ?? e).slice(0, 1000) })
+    // A rejected field name is the usual first-run problem: show the real names so the fix is one step.
+    if (String(e.message).includes('Dynamics rejected')) await discover().catch(() => {})
     throw e
   }
 }
