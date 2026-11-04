@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 interface Prepared { fileName: string; blob: Blob }
 
@@ -50,6 +50,9 @@ export default function EmailDialog({
   const toOk = EMAIL.test(to.trim())
   const ready = !!prepared && toOk
 
+  // A web page cannot attach a file to a mailto: link. On a phone the share sheet can: it hands the PDF to Outlook or Gmail as an attachment.
+  const file = useMemo(() => (prepared ? new File([prepared.blob], prepared.fileName, { type: 'application/pdf' }) : null), [prepared])
+  const attachOnShare = !!file && window.matchMedia('(pointer: coarse)').matches && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })
   const mailtoHref = `mailto:${to.trim()}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text.replace(/\n/g, '\r\n'))}`
 
   const downloadPdf = () => {
@@ -64,9 +67,14 @@ export default function EmailDialog({
   // The compose links open in the same click that downloads the PDF, so the file is ready to attach.
   const launch = (e: React.MouseEvent) => {
     if (!ready) { e.preventDefault(); return }
+    if (attachOnShare && file) {
+      e.preventDefault()
+      navigator.share({ files: [file], title: subj, text }).catch(() => { /* the share sheet was closed */ })
+      return
+    }
     if (!alreadyDownloaded) downloadPdf()
   }
-  const appValid = appTo === 'customer' ? EMAIL.test(to.trim()) : !!storeEmail
+  const appValid = appTo === 'customer' ? EMAIL.test(to.trim()) : true // the server sends to the store's email, or its managers
   const sendFromApp = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!appValid) return
@@ -106,7 +114,9 @@ export default function EmailDialog({
                 ? 'Saving the document and preparing the PDF…'
                 : alreadyDownloaded
                   ? `The PDF is downloaded as ${prepared.fileName}. Attach it to the email.`
-                  : `Opening the email, in Outlook or your mail app, also downloads the PDF as ${prepared.fileName}. Attach it to the email.`}
+                  : attachOnShare
+                    ? 'Choose Outlook or your mail app next. The PDF goes with the email as an attachment.'
+                    : `Opening the email also downloads the PDF as ${prepared.fileName}. A web page cannot attach it for you, so drag it from your downloads into the email.`}
             </p>
             {!toOk && to.trim() !== '' && <p className="bad">That email address is not valid.</p>}
             <div className="actions" style={{ marginTop: 'var(--space-md)' }}>
@@ -126,7 +136,7 @@ export default function EmailDialog({
                   <input name="appTo" type="email" inputMode="email" autoComplete="off" value={to} onChange={(e) => setTo(e.target.value)} />
                 </label>
               ) : (
-                <label>Store email<input name="appTo" readOnly value={storeEmail ?? 'No store email set'} /></label>
+                <label>Store<input name="appTo" readOnly value={storeEmail ?? 'The store’s managers'} /></label>
               )}
               <label>Message <small>optional, added to the email</small>
                 <textarea name="appMessage" rows={3} value={appMessage} onChange={(e) => setAppMessage(e.target.value)} />
@@ -134,10 +144,9 @@ export default function EmailDialog({
             </div>
             <p className="muted">
               {appTo === 'customer'
-                ? `The PDF is attached. A copy goes to ${storeEmail ?? 'the store'} and replies come back to the store.`
+                ? `The PDF is attached. A copy goes to ${storeEmail ?? 'the store’s managers'} and replies come back to the store.`
                 : 'The PDF is sent to the store only, and the store can forward it from its own mailbox.'}
             </p>
-            {appTo === 'store' && !storeEmail && <p className="bad">This store has no email set. Ask the admin to add it.</p>}
             <div className="actions" style={{ marginTop: 'var(--space-md)' }}>
               <button type="submit" className="btn primary" disabled={!appValid || busy}>{busy ? 'Sending…' : 'Send from the app'}</button>
             </div>

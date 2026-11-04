@@ -3,7 +3,7 @@
 // Needs secrets: RESEND_API_KEY, MAIL_FROM (e.g. "HSW Quotes <quotes@hsw.com.au>", a Resend-verified domain).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { cors, json } from '../_shared/cors.ts'
-import { accessOf, canActOnDoc } from '../_shared/access.ts'
+import { accessOf, canActOnDoc, managerEmails } from '../_shared/access.ts'
 
 const MAX_PDF_BYTES = 3_000_000 // decoded size
 const HOURLY_LIMIT = 40 // sends per signed-in user per hour: this is not a bulk mailer
@@ -55,16 +55,18 @@ Deno.serve(async (req) => {
     if ((count ?? 0) >= HOURLY_LIMIT) return json({ error: 'Too many emails sent this hour. Try again later.' }, 429)
 
     // Recipients
+    const managers = await managerEmails(admin, doc.store_id)
+    const storeCopy = EMAIL.test(String(store.email ?? '')) ? [String(store.email)] : managers // the store's mailbox, else its managers
     let to: string
     if (kind === 'store') {
-      to = String(store.email ?? '').trim()
-      if (!EMAIL.test(to)) return json({ error: 'This store has no email set. Ask the admin to add it.' }, 400)
+      to = storeCopy.join(', ')
+      if (!to) return json({ error: 'This store has no email or manager yet. Ask the admin to add one.' }, 400)
     } else {
       to = String(b.to_email ?? doc.customer_email ?? '').trim()
       if (!EMAIL.test(to)) return json({ error: 'Enter a valid customer email address' }, 400)
     }
-    const bcc = kind === 'customer' && EMAIL.test(String(store.email ?? '')) ? [String(store.email)] : undefined
-    const replyTo = EMAIL.test(String(store.email ?? '')) ? String(store.email) : undefined
+    const bcc = kind === 'customer' && storeCopy.length ? storeCopy : undefined
+    const replyTo = EMAIL.test(String(store.email ?? '')) ? String(store.email) : callerEmail
 
     // From: the configured sending address, shown under the store's name
     const mailFrom = Deno.env.get('MAIL_FROM') ?? ''
@@ -108,7 +110,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`, 'content-type': 'application/json' },
       body: JSON.stringify({
-        from, to: [to], bcc, reply_to: replyTo, subject, html, text,
+        from, to: to.split(', '), bcc, reply_to: replyTo, subject, html, text,
         attachments: [{ filename: `${safeName(`${doc.doc_number} ${doc.customer_name}`)}.pdf`, content: pdf }],
       }),
     })

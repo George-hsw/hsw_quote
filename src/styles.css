@@ -230,7 +230,7 @@ tr.inactive { opacity: 0.6; }
   table.items td::before, table.book td::before { content: attr(data-label); display: block; font-family: var(--font-body); font-variant-numeric: normal; font-size: var(--text-sm); color: var(--color-muted); margin-bottom: var(--space-3xs); }
   table.items td[data-label="Description"], table.items td[data-label="Own description"],
   table.book td[data-label="Customer"], table.book td[data-label="Number"],
-  table.book td[data-label="Login email"], table.book td[data-label="Owner email"], table.book td[data-label="Name"],
+  table.book td[data-label="Store email"], table.book td[data-label="Managers"], table.book td[data-label="Name"],
   table.book td[data-label="Email"], table.book td[data-label="Person"], table.book .rowactions { grid-column: 1 / -1; }
   table.book td { overflow-wrap: anywhere; }
   table td.r { text-align: left; }

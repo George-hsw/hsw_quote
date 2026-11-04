@@ -1,7 +1,7 @@
 # HSW Quote & Invoice Builder
 
 Web version of `HSW_Quote_Invoice_Builder.xlsx`. Staff sign in with their store email, build a Quote or Tax Invoice
-(scan or search items), download the PDF, and record deposits/payments. Each payment emails the franchise owner.
+(scan or search items), download the PDF, and record deposits/payments. Each payment emails the store's managers.
 
 Money rules match the workbook: prices include GST, GST = total ÷ 11, line = qty × price × (1 − disc%), blank qty = 1,
 numbers `Q-<STORE>-<n>` / `INV-<STORE>-<n>`, quote valid 30 days, invoice due 7 days (or a chosen date).
@@ -23,7 +23,7 @@ Enforced by Row Level Security (`supabase/migrations/002_*.sql`, `010_roles.sql`
 ```
 Dynamics / LS Central --(Scheduler 1: sync-dynamics.yml, nightly, incremental)--> Supabase `items`
 Supabase `items` --(Scheduler 2: publish-prices.yml, after each sync + weekly)--> public/items.json committed to the repo --> Vercel redeploys --> app
-Store user --(record-payment function)--> payments table + email to the store's owner_email (Resend)
+Store user --(record-payment function)--> payments table + email to the store's managers (Resend)
 Store user --(send-document function)--> the PDF emailed to the customer (copy + replies to the store) or to the store only
 ```
 
@@ -64,7 +64,7 @@ Prices change in Dynamics, not in this app. To refresh sooner than overnight, ru
 4. Run **Deploy Supabase** (creates tables, loads the store list, deploys the functions), then seed prices once:
    `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/seed-supabase.mjs`.
 5. **Myriad Pro**: it is an Adobe font and cannot be bundled. In Adobe Fonts (fonts.adobe.com, included with Creative Cloud), add Myriad Pro to a web project with the Vercel domain, tick the weights Light, Regular, Semibold and Bold, then put the project id in `VITE_ADOBE_FONTS_KIT`. The app uses Myriad Pro Light for body text. Until then the app uses Source Sans 3, a close free match. The PDF uses Helvetica.
-6. Sign in as the admin → **Stores**: set each store's franchise owner email, legal name, ABN and bank details. Then **Users**: add each manager and staff member with a store and a role, and hand over the password shown.
+6. Sign in as the admin → **Stores**: set each store's legal name, ABN and bank details. Then **Users**: add each manager and staff member with a store and a role, and hand over the password shown. A store's managers are its owners for email: they get its payment notices and a copy of what it sends, so no owner email is typed separately.
 
 ## Emailing quotes and invoices
 

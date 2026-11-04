@@ -101,7 +101,7 @@ function Shell({ session }: { session: Session }) {
           ) : tab === 'reports' && sees ? (
             <Reports isAdmin={isAdmin} stores={allStores} names={names} />
           ) : tab === 'stores' && isAdmin ? (
-            <Stores stores={allStores} onChanged={loadStores} />
+            <Stores stores={allStores} people={people} onChanged={loadStores} />
           ) : tab === 'users' && isAdmin ? (
             <Users users={people} stores={allStores} onChanged={loadPeople} />
           ) : null}

@@ -1,9 +1,9 @@
-// Records a payment / deposit against a Tax Invoice, then emails the franchise owner:
+// Records a payment / deposit against a Tax Invoice, then emails the store's managers:
 // what was received, the balance still due, and the due date.
 // Needs secrets: RESEND_API_KEY, MAIL_FROM (e.g. "HSW Quotes <quotes@hsw.com.au>")
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { cors, json } from '../_shared/cors.ts'
-import { accessOf, canActOnDoc } from '../_shared/access.ts'
+import { accessOf, canActOnDoc, managerEmails } from '../_shared/access.ts'
 
 const aud = (cents: number) =>
   '$' + (cents / 100).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -53,12 +53,13 @@ Deno.serve(async (req) => {
     const balance = doc.total_cents - paid
     await admin.from('documents').update({ status: balance === 0 ? 'paid' : 'part_paid' }).eq('id', doc.id)
 
-    // ---- notify the franchise owner ----
-    const to = store.owner_email || null
+    // ---- notify the store's managers (else the store's own email) ----
+    const managers = await managerEmails(admin, doc.store_id)
+    const to = managers.length ? managers : store.email ? [String(store.email)] : []
     let emailed = false
     let warning = ''
-    if (!to) {
-      warning = 'No franchise owner email is set for this store, so no notification was sent.'
+    if (to.length === 0) {
+      warning = 'This store has no manager yet, so no notification was sent. Add one on the Users tab.'
     } else {
       const label = kind === 'deposit' ? 'Deposit received' : 'Payment received'
       const subject =
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ from: Deno.env.get('MAIL_FROM'), to: [to], subject, html, text }),
+        body: JSON.stringify({ from: Deno.env.get('MAIL_FROM'), to, subject, html, text }),
       })
       if (res.ok) {
         emailed = true
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
         await admin.from('payments').update({ email_error: (await res.text()).slice(0, 500) }).eq('id', pay.id)
       }
     }
-    return json({ ok: true, paid_cents: paid, balance_cents: balance, emailed, emailed_to: emailed ? to : null, warning })
+    return json({ ok: true, paid_cents: paid, balance_cents: balance, emailed, emailed_to: emailed ? to.join(', ') : null, warning })
   } catch (e) {
     console.error(e)
     return json({ error: 'Something went wrong recording the payment' }, 500)

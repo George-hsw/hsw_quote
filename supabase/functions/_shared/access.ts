@@ -21,6 +21,12 @@ export async function accessOf(admin: SupabaseClient, userId: string | undefined
   return shared ? { role: 'store', storeId: shared.id } : null
 }
 
+/** The people who run a store: its active managers. Payment notices and copies go to them, so there is no separate owner email to keep in step. */
+export async function managerEmails(admin: SupabaseClient, storeId: string): Promise<string[]> {
+  const { data } = await admin.from('app_users').select('email').eq('store_id', storeId).eq('role', 'manager').eq('active', true)
+  return (data ?? []).map((m) => String(m.email).toLowerCase())
+}
+
 /** Admin: any document. Manager and shared store login: any document in their store. Staff: only their own. */
 export function canActOnDoc(a: Access | null, doc: { store_id: string; created_by: string | null }, email: string): boolean {
   if (!a) return false

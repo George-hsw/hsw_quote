@@ -1,25 +1,25 @@
 import { useState } from 'react'
-import PasswordDialog from './PasswordDialog'
 import { useToast } from './Toast'
-import { DEMO, MAX_STORES, supabase, type StoreRow } from './lib/supabase'
+import { DEMO, MAX_STORES, supabase, type AppUser, type StoreRow } from './lib/supabase'
 
 interface Props {
   stores: StoreRow[] // all stores, including inactive
+  people: AppUser[] // everyone, so each store can show its managers
   onChanged: () => void
 }
 
 type Draft = Omit<StoreRow, 'id'> & { id?: string }
 const blank = (): Draft => ({
-  name: '', code: '', address: '', suburb: '', phone: '', email: '', owner_email: '',
+  name: '', code: '', address: '', suburb: '', phone: '', email: '', owner_email: null,
   legal_name: '', abn: '', bank_name: '', bsb: '', account: '', active: true, password_set_at: null,
 })
 
-export default function Stores({ stores, onChanged }: Props) {
+export default function Stores({ stores, people, onChanged }: Props) {
   const toast = useToast()
   const [draft, setDraft] = useState<Draft | null>(null)
-  const [pwStore, setPwStore] = useState<StoreRow | null>(null)
   const [busy, setBusy] = useState(false)
   const activeCount = stores.filter((s) => s.active).length
+  const managersOf = (id: string) => people.filter((p) => p.store_id === id && p.role === 'manager' && p.active)
 
   const f = (k: keyof Draft, label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <label>{label}
@@ -36,7 +36,6 @@ export default function Stores({ stores, onChanged }: Props) {
       ...draft,
       code: draft.code.trim().toUpperCase(),
       email: draft.email?.trim().toLowerCase() || null,
-      owner_email: draft.owner_email?.trim().toLowerCase() || null,
     }
     const { id, password_set_at: _kept, ...fields } = row // the password date is set by the server, never from this form
     const { error } = id ? await supabase.from('stores').update(fields).eq('id', id) : await supabase.from('stores').insert(fields)
@@ -58,7 +57,7 @@ export default function Stores({ stores, onChanged }: Props) {
       <div className="pagehead">
         <div>
           <h1>Stores</h1>
-          <p className="muted">Using {activeCount} of {MAX_STORES} active stores. A store’s <b>login email</b> is what it signs in with; the <b>franchise owner email</b> receives payment notifications.</p>
+          <p className="muted">Using {activeCount} of {MAX_STORES} active stores. The <b>store email</b> is the shop’s own mailbox, shown on documents. Whoever runs a store is its <b>manager</b>: add them on the Users tab and they receive its payment notices, so there is nothing to type twice.</p>
         </div>
         <div className="actions">
           <button type="button" className="btn primary" disabled={activeCount >= MAX_STORES} onClick={() => setDraft(blank())}>Add store</button>
@@ -72,8 +71,7 @@ export default function Stores({ stores, onChanged }: Props) {
             <div className="grid">
               {f('name', 'Store name', { required: true })}
               {f('code', 'Store code, 2 to 6 letters or digits', { required: true, pattern: '[A-Za-z0-9]{2,6}', maxLength: 6 })}
-              {f('email', 'Store login email', { type: 'email' })}
-              {f('owner_email', 'Franchise owner email', { type: 'email' })}
+              {f('email', 'Store email', { type: 'email' })}
               {f('phone', 'Phone', { type: 'tel' })}
               {f('address', 'Address line')}
               {f('suburb', 'Suburb STATE Postcode')}
@@ -96,18 +94,16 @@ export default function Stores({ stores, onChanged }: Props) {
 
       <div className="tablewrap">
         <table className="book">
-          <thead><tr><th>Store</th><th>Code</th><th>Login email</th><th>Owner email</th><th>ABN</th><th>Password</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
+          <thead><tr><th>Store</th><th>Code</th><th>Store email</th><th>Managers</th><th>ABN</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
           <tbody>
             {stores.map((s) => (
               <tr key={s.id} className={s.active ? '' : 'inactive'}>
                 <td data-label="Store"><b>{s.name}</b>{!s.active && <small> (inactive)</small>}</td>
                 <td data-label="Code"><span className="num">{s.code}</span></td>
-                <td data-label="Login email">{s.email ?? <span className="chip warn">Not set</span>}</td>
-                <td data-label="Owner email">{s.owner_email ?? <span className="chip warn">Not set</span>}</td>
+                <td data-label="Store email">{s.email ?? <span className="chip warn">Not set</span>}</td>
+                <td data-label="Managers">{managersOf(s.id).length === 0 ? <span className="chip warn">No manager yet</span> : managersOf(s.id).map((m) => <div key={m.user_id}><b>{m.full_name}</b> <small>{m.email}</small></div>)}</td>
                 <td data-label="ABN">{s.abn ? <span className="num">{s.abn}</span> : <span className="chip warn">Not set</span>}</td>
-                <td data-label="Password">{s.password_set_at ? <span className="chip paid">Set</span> : <span className="chip warn">Not set</span>}</td>
                 <td className="rowactions">
-                  <button type="button" className="btn" disabled={!s.email} title={s.email ? undefined : 'Add a login email first'} onClick={() => setPwStore(s)}>{s.password_set_at ? 'Reset password' : 'Set password'}</button>
                   <button type="button" className="btn" onClick={() => setDraft({ ...s })}>Edit</button>
                 </td>
               </tr>
@@ -115,7 +111,6 @@ export default function Stores({ stores, onChanged }: Props) {
           </tbody>
         </table>
       </div>
-      {pwStore && <PasswordDialog name={pwStore.name} email={pwStore.email} fn="set-store-password" body={{ store_id: pwStore.id }} onClose={() => setPwStore(null)} onDone={onChanged} />}
     </>
   )
 }
