@@ -51,7 +51,7 @@ export default function Reports({ isAdmin, stores, names }: Props) {
       <div className="pagehead">
         <div>
           <h1>Reports</h1>
-          <p className="muted">Quotes and invoices by the person who created them. Invoices count at their full value; void ones are left out.</p>
+          <p className="muted">Quotes and invoices by the person who created them. Invoiced is the value of invoices, received is what has been paid on them, and quote deposits are advances held on quotes not yet invoiced. Void documents are left out.</p>
         </div>
       </div>
       <div className="filters">
@@ -78,7 +78,7 @@ export default function Reports({ isAdmin, stores, names }: Props) {
       ) : (
         <div className="tablewrap">
           <table className="book reports">
-            <thead><tr><th>Person</th><th className="r">Quotes</th><th className="r">Invoices</th><th className="r">Invoiced</th><th className="r">Received</th><th className="r">Still due</th></tr></thead>
+            <thead><tr><th>Person</th><th className="r">Quotes</th><th className="r">Invoices</th><th className="r">Invoiced</th><th className="r">Quote deposits</th><th className="r">Received</th><th className="r">Still due</th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.key || 'unknown'}>
@@ -86,6 +86,7 @@ export default function Reports({ isAdmin, stores, names }: Props) {
                   <td data-label="Quotes" className="r num">{r.quotes}</td>
                   <td data-label="Invoices" className="r num">{r.invoices}</td>
                   <td data-label="Invoiced" className="r num">{money(r.invoicedCents)}</td>
+                  <td data-label="Quote deposits" className="r num">{money(r.depositCents)}</td>
                   <td data-label="Received" className="r num">{money(r.receivedCents)}</td>
                   <td data-label="Still due" className="r num">{money(r.dueCents)}</td>
                 </tr>
@@ -95,6 +96,7 @@ export default function Reports({ isAdmin, stores, names }: Props) {
                 <td data-label="Quotes" className="r num"><b>{total.quotes}</b></td>
                 <td data-label="Invoices" className="r num"><b>{total.invoices}</b></td>
                 <td data-label="Invoiced" className="r num"><b>{money(total.invoicedCents)}</b></td>
+                <td data-label="Quote deposits" className="r num"><b>{money(total.depositCents)}</b></td>
                 <td data-label="Received" className="r num"><b>{money(total.receivedCents)}</b></td>
                 <td data-label="Still due" className="r num"><b>{money(total.dueCents)}</b></td>
               </tr>

@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import defaultSettings from './data/settings.json'
 import { useConfirm } from './Confirm'
 import { beep, primeAudio } from './lib/beep'
+import { AddressInput } from './AddressInput'
 import { clearRemoteDraft, useDraftSync } from './lib/draftSync'
 import EmailDialog from './EmailDialog'
+import { PaymentDialog, paidOf } from './PaymentDialog'
 import Scanner from './Scanner'
 import { useToast } from './Toast'
 import { findByScan, indexBarcodes, indexItems, loadPriceList, searchItems, type PriceList } from './lib/items'
@@ -13,13 +15,14 @@ import {
   type Item, type Line, type QuoteInput, type Settings, type Store,
 } from './lib/quote'
 import { loadLogo, type Logo } from './lib/logo'
-import { DEMO, isoDate, supabase, type DocRow, type StoreRow } from './lib/supabase'
+import { DEMO, isoDate, supabase, type DocRow, type PaymentRow, type StoreRow } from './lib/supabase'
 
 interface Props {
   email: string
   isAdmin: boolean
   stores: StoreRow[] // active stores this user may use (one for a store login, all for admin)
   openDoc: DocRow | null // a saved document to edit, or null for a new one
+  canPay: (storeId: string) => boolean // taking a deposit or payment is for managers and the admin
   onSaved: () => void
   onNew: () => void // reset to a fresh builder
 }
@@ -34,7 +37,7 @@ const normalise = (d: Partial<QuoteInput> | undefined): QuoteInput => {
   }
 }
 
-export default function Builder({ email, isAdmin, stores: storeRows, openDoc, onSaved, onNew }: Props) {
+export default function Builder({ email, isAdmin, stores: storeRows, openDoc, canPay, onSaved, onNew }: Props) {
   const draftKey = `hsw-quote-draft:${email}`
   const toast = useToast()
   const [ask, confirmDialog] = useConfirm()
@@ -51,7 +54,12 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   const [emailOpen, setEmailOpen] = useState(false)
   const [downloadedStamp, setDownloadedStamp] = useState('') // the PDF content last downloaded, to avoid a duplicate download
   const [savedType, setSavedType] = useState(openDoc?.doc_type ?? null)
-  const locked = !!openDoc && openDoc.payments.length > 0
+  // Money recorded on this document. A quote that holds a deposit, or an invoice with payments, is frozen; making the
+  // quote into an invoice unfreezes the form (the deposit moves across to the new invoice when it is saved).
+  const [payments, setPayments] = useState<PaymentRow[]>(openDoc?.payments ?? [])
+  const [paying, setPaying] = useState(false)
+  const convertFrom = useRef<string | null>(null) // the quote being turned into this invoice
+  const locked = payments.length > 0 && quote.docType === savedType
   const [priceList, setPriceList] = useState<PriceList | null>(null)
   const [find, setFind] = useState('')
   const [scanning, setScanning] = useState(false)
@@ -90,7 +98,7 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   const itemIndex = useMemo(() => indexItems(priceList?.items ?? []), [priceList])
   const barcodeIndex = useMemo(() => indexBarcodes(priceList?.items ?? []), [priceList])
   // Payments recorded in the database feed the printed Paid / Balance due lines.
-  const paidCents = openDoc && openDoc.doc_type === quote.docType ? openDoc.payments.reduce((a, p) => a + p.amount_cents, 0) : 0
+  const paidCents = savedType === quote.docType || (savedType === 'Quote' && quote.docType === 'Tax Invoice') ? paidOf({ payments }) : 0
   const quoteEff = useMemo(() => (paidCents > 0 ? { ...quote, paid: String(paidCents / 100) } : quote), [quote, paidCents])
   const c = useMemo(
     () => compute(quoteEff, itemIndex, stores, settings, priceList?.items.length ?? 0),
@@ -109,11 +117,16 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   const setLine = (i: number, patch: Partial<Line>) =>
     setQuote((q) => ({ ...q, lines: q.lines.map((l, n) => (n === i ? { ...l, ...patch } : l)) }))
 
-  // Converting a saved quote to an invoice creates a NEW document (same digits, INV- prefix).
+  // Converting a saved quote to an invoice creates a NEW document (same digits, INV- prefix); its deposit moves across.
   const changeType = (t: QuoteInput['docType']) => {
     set('docType', t)
-    if (savedType && t !== savedType) setDocId(null)
-    else if (openDoc && t === openDoc.doc_type) setDocId(openDoc.id)
+    if (savedType && t !== savedType) {
+      convertFrom.current = savedType === 'Quote' && t === 'Tax Invoice' ? (docIdRef.current ?? docId) : null
+      setDocId(null)
+    } else {
+      convertFrom.current = null
+      if (docIdRef.current) setDocId(docIdRef.current)
+    }
   }
 
   /** Add an item by scan/search. Re-scanning an item already on the quote adds 1 to its qty. */
@@ -170,13 +183,14 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
     }
     const q = docId
       ? supabase.from('documents').update(row).eq('id', docId).select('id').single()
-      : supabase.from('documents').insert(row).select('id').single()
+      : supabase.from('documents').insert(convertFrom.current ? ({ ...row, from_quote: convertFrom.current } as typeof row) : row).select('id').single()
     const { data, error } = await q
     if (error) {
       toast.error(error.code === '23505' ? `${c.docNumber} already exists for this store, so use a different number.` : error.message)
       return false
     }
     docIdRef.current = data.id
+    convertFrom.current = null
     setDocId(data.id); setSavedType(quote.docType)
     try { localStorage.removeItem(draftKey); localStorage.removeItem(`${draftKey}:at`) } catch { /* ignore */ }
     void clearRemoteDraft()
@@ -188,6 +202,21 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   /** Preview/Download stay clickable; when something is missing we say exactly what. */
   const showProblems = () => toast.error(c.problems)
   const doSave = async () => { setBusy(true); await save(); setBusy(false) }
+  /** A deposit or payment is taken against the saved document, so save any changes first. */
+  const openPay = async () => {
+    setBusy(true)
+    const ok = await save()
+    setBusy(false)
+    if (ok) setPaying(true)
+  }
+  const afterPayment = async () => {
+    setPaying(false)
+    if (!DEMO && supabase && docIdRef.current) {
+      const { data } = await supabase.from('payments').select('amount_cents,kind,paid_on').eq('document_id', docIdRef.current)
+      if (data) setPayments(data as PaymentRow[])
+    }
+    onSaved()
+  }
   const download = async () => {
     if (!c.ready) return showProblems()
     setBusy(true)
@@ -268,7 +297,14 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
         <div className="actions"><button type="button" className="btn" onClick={newQuote}>Clear form</button></div>
       </div>
 
-      {locked && <p className="note">This invoice has payments recorded, so it can no longer be edited. You can still download the PDF.</p>}
+      {locked && (
+        <div className="note">
+          {savedType === 'Quote'
+            ? <p>A deposit of {money(paidCents)} is recorded on this quote, so the quote can no longer be edited. You can still download the PDF.</p>
+            : <p>This invoice has payments recorded, so it can no longer be edited. You can still download the PDF.</p>}
+          {savedType === 'Quote' && <div className="actions"><button type="button" className="btn" onClick={() => changeType('Tax Invoice')}>Make this a tax invoice</button></div>}
+        </div>
+      )}
 
       <div className="workspace">
         <fieldset disabled={locked} className="plain">
@@ -313,9 +349,11 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
                 <label>Customer ABN<input name="customerAbn" inputMode="numeric" autoComplete="off" value={quote.customer.abn} onChange={(e) => setCust('abn', e.target.value)} /></label>
                 <label>Phone <small>required</small><input name="phone" aria-required="true" type="tel" autoComplete="off" value={quote.customer.phone} onChange={(e) => setCust('phone', e.target.value)} /></label>
                 <label>Email <small>required</small><input name="email" aria-required="true" type="email" autoComplete="off" value={quote.customer.email} onChange={(e) => setCust('email', e.target.value)} /></label>
-                <label>Address <small>street</small><input name="address" autoComplete="off" value={quote.customer.address} onChange={(e) => setCust('address', e.target.value)} /></label>
+                <label className="addr-field">Address <small>start typing to search</small><AddressInput name="address" value={quote.customer.address} onChange={(v) => setCust('address', v)}
+                  onPick={(a) => setQuote((q) => ({ ...q, customer: { ...q.customer, address: a.street, suburb: a.suburb } }))} /></label>
                 <label>Suburb / State / Postcode<input name="suburb" autoComplete="off" value={quote.customer.suburb} onChange={(e) => setCust('suburb', e.target.value)} /></label>
-                <label>Deliver / install to <small>if different</small><input name="deliverTo" autoComplete="off" value={quote.customer.deliverTo} onChange={(e) => setCust('deliverTo', e.target.value)} /></label>
+                <label className="addr-field">Deliver / install to <small>if different</small><AddressInput name="deliverTo" value={quote.customer.deliverTo} onChange={(v) => setCust('deliverTo', v)}
+                  onPick={(a) => setCust('deliverTo', a.label)} /></label>
               </div>
             </section>
 
@@ -414,8 +452,8 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
               <dt>Installation</dt><dd>{money(c.installCents)}</dd>
               <dt className="total">Total (incl GST)</dt><dd className="total">{money(c.totalCents)}</dd>
               <dt>GST included</dt><dd>{money(c.gstCents)}</dd>
-              {isInvoice && paidCents > 0 && (
-                <><dt>Paid</dt><dd>{money(c.paidCents)}</dd><dt className="total">Balance due</dt><dd className="total">{money(c.balanceCents)}</dd></>
+              {paidCents > 0 && (
+                <><dt>{isInvoice ? 'Paid' : 'Deposit received'}</dt><dd>{money(c.paidCents)}</dd><dt className="total">Balance due</dt><dd className="total">{money(c.balanceCents)}</dd></>
               )}
             </dl>
             <dl className="ledger-meta">
@@ -432,6 +470,9 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
               <button type="button" className="btn wide" onClick={preview}>Preview PDF</button>
               <button type="button" className="btn wide" onClick={openEmail} disabled={busy}>Email PDF</button>
               {!locked && <button type="button" className="btn wide" onClick={doSave} disabled={busy}>Save</button>}
+              {selRow && canPay(selRow.id) && savedType === quote.docType && c.totalCents - paidCents > 0 && (
+                <button type="button" className="btn wide" onClick={openPay} disabled={busy}>{isInvoice ? 'Record payment' : 'Record deposit'}</button>
+              )}
             </div>
           </div>
         </aside>
@@ -440,6 +481,11 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
         <div><small>Total (incl GST)</small><b className="num">{money(c.totalCents)}</b></div>
         <button type="button" className={'btn primary' + (c.ready ? '' : ' blocked')} aria-disabled={!c.ready} onClick={download} disabled={busy}>{locked ? 'Download PDF' : 'Save & download PDF'}</button>
       </div>
+      {paying && docIdRef.current && (
+        <PaymentDialog
+          doc={{ id: docIdRef.current, doc_type: quote.docType, doc_number: c.docNumber, customer_name: quote.customer.name.trim(), total_cents: c.totalCents, payments }}
+          onClose={() => setPaying(false)} onDone={afterPayment} />
+      )}
       {emailOpen && (
         <EmailDialog
           docLabel={`${quote.docType} ${c.docNumber}`}

@@ -14,11 +14,12 @@ export interface ReportRow {
   quotes: number
   invoices: number
   invoicedCents: number
-  receivedCents: number
+  depositCents: number // deposits taken on quotes that have not become invoices yet
+  receivedCents: number // money recorded against invoices (a quote's deposit moves here when it is invoiced)
   dueCents: number
 }
 
-const blank = (key: string, name: string): ReportRow => ({ key, name, quotes: 0, invoices: 0, invoicedCents: 0, receivedCents: 0, dueCents: 0 })
+const blank = (key: string, name: string): ReportRow => ({ key, name, quotes: 0, invoices: 0, invoicedCents: 0, depositCents: 0, receivedCents: 0, dueCents: 0 })
 
 /**
  * Documents created on or after `since` (null = all time), grouped by who created them, busiest first.
@@ -31,7 +32,10 @@ export function summarise(docs: ReportDoc[], since: Date | null, names: Record<s
     if (d.status === 'void') continue
     const key = (d.created_by ?? '').toLowerCase()
     const row = by.get(key) ?? blank(key, names[key] ?? (key || 'Unknown'))
-    if (d.doc_type === 'Quote') row.quotes += 1
+    if (d.doc_type === 'Quote') {
+      row.quotes += 1
+      row.depositCents += d.payments.reduce((a, p) => a + p.amount_cents, 0)
+    }
     else {
       const received = d.payments.reduce((a, p) => a + p.amount_cents, 0)
       row.invoices += 1
@@ -43,7 +47,7 @@ export function summarise(docs: ReportDoc[], since: Date | null, names: Record<s
   }
   const rows = [...by.values()].sort((a, b) => b.invoicedCents - a.invoicedCents || b.quotes - a.quotes || a.name.localeCompare(b.name))
   const total = rows.reduce((t, r) => ({
-    ...t, quotes: t.quotes + r.quotes, invoices: t.invoices + r.invoices, invoicedCents: t.invoicedCents + r.invoicedCents,
+    ...t, quotes: t.quotes + r.quotes, invoices: t.invoices + r.invoices, invoicedCents: t.invoicedCents + r.invoicedCents, depositCents: t.depositCents + r.depositCents,
     receivedCents: t.receivedCents + r.receivedCents, dueCents: t.dueCents + r.dueCents,
   }), blank('', 'Total'))
   return { rows, total }

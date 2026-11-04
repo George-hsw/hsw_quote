@@ -223,7 +223,7 @@ export function compute(
   const installCents = toCents(num(q.installFee) ?? 0)
   const totalCents = itemsCents + deliveryCents + installCents
   const gstCents = Math.round(totalCents / 11) // prices include GST, as on hsw.com.au: GST = total / 11
-  const paidCents = isInvoice ? toCents(num(q.paid) ?? 0) : 0
+  const paidCents = toCents(num(q.paid) ?? 0) // a deposit taken on a quote shows too
   const balanceCents = totalCents - paidCents
 
   const dueOverride = parseDate(q.dueDate)

@@ -114,7 +114,7 @@ function Shell({ session }: { session: Session }) {
         {!allStores || !people ? <p className="muted">Loading…</p>
           : noAccess ? <p className="note bad">This email is not linked to an active store. Ask the admin ({ADMIN_EMAIL}).</p>
           : tab === 'new' ? (
-            <Builder key={builderKey} email={email} isAdmin={multi} stores={active} openDoc={openDoc}
+            <Builder key={builderKey} email={email} isAdmin={multi} stores={active} openDoc={openDoc} canPay={canPay}
               onSaved={() => setRefresh((r) => r + 1)} onNew={() => go('new')} />
           ) : tab === 'docs' ? (
             <Documents isAdmin={multi} showBy={sees} canPay={canPay} names={names} refreshKey={refresh} onOpen={open} />

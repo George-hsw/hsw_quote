@@ -119,6 +119,9 @@ fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
 .results li { padding: var(--space-xs) var(--space-sm); cursor: pointer; display: flex; gap: var(--space-sm); border-radius: var(--radius-pill); }
 .results li:hover { background: var(--color-paper-3); }
 .results li span { margin-left: auto; white-space: nowrap; color: var(--color-muted); font-family: var(--font-outlier); font-size: var(--text-sm); }
+.addr-field { position: relative; }
+.results.addr { top: 100%; text-align: left; }
+.results.addr li.on { background: var(--color-paper-3); }
 .results b { font-family: var(--font-outlier); font-weight: 600; }
 
 .scanner { position: fixed; inset: 0; z-index: var(--z-modal); background: var(--color-camera); display: flex; flex-direction: column; }
@@ -259,6 +262,7 @@ tr.inactive { opacity: 0.6; }
   table.book.docs td[data-label="Paid"] { grid-column: span 2; order: 7; }
   table.book.docs td[data-label="Balance"] { grid-column: span 2; order: 8; }
   table.book.docs td[data-label="Due"] { grid-column: 1 / -1; order: 9; }
+  table.book.docs td.qpay { grid-column: span 3; }
   table.book.docs tr:has(td.na) td[data-label="Total"] { grid-column: 1 / -1; }
   table.book.docs td.rowactions { grid-column: 1 / -1; order: 10; }
   table.book.docs td[data-label="Number"]::before, table.book.docs td[data-label="Customer"]::before, table.book.docs td[data-label="Status"]::before { display: none; }
@@ -266,7 +270,7 @@ tr.inactive { opacity: 0.6; }
   /* Reports: the person, quotes and invoices, then the three amounts */
   table.book.reports td[data-label="Person"] { grid-column: 1 / -1; order: 1; font-size: var(--text-md); }
   table.book.reports td[data-label="Quotes"], table.book.reports td[data-label="Invoices"] { grid-column: span 3; order: 2; }
-  table.book.reports td[data-label="Invoiced"], table.book.reports td[data-label="Received"], table.book.reports td[data-label="Still due"] { grid-column: span 2; order: 3; }
+  table.book.reports td[data-label="Invoiced"], table.book.reports td[data-label="Quote deposits"], table.book.reports td[data-label="Received"], table.book.reports td[data-label="Still due"] { grid-column: span 3; order: 3; }
   table.book.reports td[data-label="Person"]::before { display: none; }
 
   /* Stores: name and Open, then code, people and ABN, then the managers */

@@ -133,8 +133,8 @@ export function buildPdf(q: QuoteInput, c: Computed, s: Settings, logo?: Logo | 
   total('Installation' + (q.installNote.trim() && c.installCents > 0 ? ` (${q.installNote.trim()})` : ''), c.installCents > 0 ? aud(c.installCents) : 'Not included')
   total('Grand total', aud(c.totalCents), true)
   total('GST Included in total', aud(c.gstCents))
-  if (isInvoice) {
-    total('Paid', aud(c.paidCents))
+  if (isInvoice || c.paidCents > 0) {
+    total(isInvoice ? 'Paid' : 'Deposit received', aud(c.paidCents))
     total('Balance due', aud(c.balanceCents), true)
   }
   y += 4

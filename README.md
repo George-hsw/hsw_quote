@@ -12,6 +12,9 @@ The first time someone signs in to their account, a short animated tour (`src/To
 ## Scanning and the live draft
 The camera scanner beeps on a good read and gives a lower double tone for a barcode that is not in the price list. The quote being built (not yet saved) is one **live draft per person**: every device signed in as that person shares it (`quote_drafts`, migration `015_quote_drafts.sql`, Supabase Realtime). Scan on the phone and the item shows on the computer a moment later; delete a line on either and it goes from both. If both are edited at once the changes are merged field by field (`mergeQuotes` in `src/lib/draftSync.ts`), so typing a customer name on the computer does not lose a scan from the phone. Saving the quote, or Clear form, removes the draft everywhere. A saved document being edited is not shared live. iPhones play the sound through the ringer, so it is silent when the silent switch is on.
 
+## Deposits and payments
+A manager (or the admin) can record a deposit or payment on a saved **quote** or **tax invoice**: the **Record deposit / Record payment** button on the Documents tab, or on the builder once the document is saved. The store managers are emailed the amount and the balance. A document with money recorded is frozen, and its status reads **Deposit received**, **Part paid** or **Paid in full**. A quote with a deposit shows it on the PDF and cannot be deleted. Use **Make this a tax invoice** on it, and the deposit moves across to the new invoice (migration `016_deposits_on_quotes.sql`). On Reports, **Invoiced** is the value of invoices, **Received** is what has been paid on them, and **Quote deposits** is advances held on quotes not yet invoiced.
+
 ## Who can do what
 Everything about people happens on the **Stores** tab: open a store and a popup lists who is in it, lets you add someone, change their permission, reset their password, turn them off, take them out of the store, or delete them.
 

@@ -1,4 +1,4 @@
-// Records a payment / deposit against a Tax Invoice, then emails the store's managers:
+// Records a payment / deposit against a Quote (an advance) or a Tax Invoice, then emails the store's managers:
 // what was received, the balance still due, and the due date.
 // Needs secrets: RESEND_API_KEY, MAIL_FROM (e.g. "HSW Quotes <quotes@hsw.com.au>")
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -30,12 +30,12 @@ Deno.serve(async (req) => {
     const paidOn = /^\d{4}-\d{2}-\d{2}$/.test(b.paid_on ?? '') ? b.paid_on : new Date().toISOString().slice(0, 10)
 
     const { data: doc } = await admin.from('documents').select('*, stores(*)').eq('id', b.document_id).single()
-    if (!doc) return json({ error: 'Invoice not found' }, 404)
+    if (!doc) return json({ error: 'Document not found' }, 404)
     const store = doc.stores
     if (!canTakePayment(await accessOf(admin, u.user?.id, callerEmail), doc))
       return json({ error: 'Not allowed for this document' }, 403)
-    if (doc.doc_type !== 'Tax Invoice') return json({ error: 'Payments can only be recorded on a Tax Invoice' }, 400)
-    if (doc.status === 'void') return json({ error: 'This invoice is void' }, 400)
+    if (doc.status === 'void') return json({ error: 'This document is void' }, 400)
+    const what = doc.doc_type === 'Quote' ? 'Quote' : 'Invoice'
 
     const { data: prior } = await admin.from('payments').select('amount_cents').eq('document_id', doc.id)
     const paidBefore = (prior ?? []).reduce((a, p) => a + p.amount_cents, 0)
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     let emailed = false
     let warning = ''
     if (to.length === 0) {
-      warning = 'This store has no manager yet, so no notification was sent. Add one on the Users tab.'
+      warning = 'This store has no manager yet, so no notification was sent. Add one on the Stores tab.'
     } else {
       const label = kind === 'deposit' ? 'Deposit received' : 'Payment received'
       const subject =
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     ${row(kind === 'deposit' ? 'Deposit received' : 'Payment received', aud(amountCents), true)}
     ${row('Received on', dateAU(paidOn))}
     ${b.reference ? row('Reference', esc(String(b.reference))) : ''}
-    ${row('Invoice total', aud(doc.total_cents))}
+    ${row(`${what} total`, aud(doc.total_cents))}
     ${row('Total paid so far', aud(paid))}
     ${row('Balance due', balance > 0 ? aud(balance) : 'Nil – paid in full', true)}
     ${balance > 0 && doc.due_date ? row('Due date', dateAU(doc.due_date), true) : ''}
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
   <p style="color:#6D6E71;font-size:12px">Recorded by ${esc(callerEmail)}. Automatic message from the HSW Quote &amp; Invoice Builder.</p></div>`
       const text =
         `${label} on ${doc.doc_number}\nCustomer: ${doc.customer_name}\nReceived: ${aud(amountCents)} on ${dateAU(paidOn)}\n` +
-        `Invoice total: ${aud(doc.total_cents)}\nPaid so far: ${aud(paid)}\nBalance due: ${balance > 0 ? aud(balance) : 'Nil'}` +
+        `${what} total: ${aud(doc.total_cents)}\nPaid so far: ${aud(paid)}\nBalance due: ${balance > 0 ? aud(balance) : 'Nil'}` +
         (balance > 0 && doc.due_date ? `\nDue date: ${dateAU(doc.due_date)}` : '')
 
       const res = await fetch('https://api.resend.com/emails', {

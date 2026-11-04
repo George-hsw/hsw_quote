@@ -46,7 +46,7 @@ describe('compute', () => {
     expect(c.lines[1].message).toBe('Qty blank – counted as 1')
   })
 
-  it('totals: prices include GST (GST = total / 11), paid only on invoices', () => {
+  it('totals: prices include GST (GST = total / 11), a deposit shows on quotes and invoices', () => {
     const q = base()
     q.lines[0] = { code: '', qty: '2', ownDescription: 'Custom wardrobe', ownPrice: '1000', discPct: '' }
     q.deliveryFee = '100'
@@ -55,8 +55,8 @@ describe('compute', () => {
     let c = compute(q, items, stores, settings, items.size)
     expect(c.totalCents).toBe(231000)
     expect(c.gstCents).toBe(21000)
-    expect(c.paidCents).toBe(0)
-    expect(c.balanceCents).toBe(231000)
+    expect(c.paidCents).toBe(50000)
+    expect(c.balanceCents).toBe(181000)
     q.docType = 'Tax Invoice'
     c = compute(q, items, stores, settings, items.size)
     expect(c.paidCents).toBe(50000)

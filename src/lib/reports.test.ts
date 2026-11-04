@@ -20,6 +20,15 @@ describe('summarise', () => {
     expect(total).toMatchObject({ quotes: 1, invoices: 3, invoicedCents: 35000, receivedCents: 15000, dueCents: 20000 })
   })
 
+  it('counts deposits held on quotes separately from money received on invoices', () => {
+    const { rows, total } = summarise([
+      doc({ doc_type: 'Quote', total_cents: 50000, payments: [{ amount_cents: 10000 }], status: 'part_paid' }),
+      doc({ total_cents: 20000, payments: [{ amount_cents: 20000 }], status: 'paid' }),
+    ], null, names)
+    expect(rows[0]).toMatchObject({ quotes: 1, invoices: 1, depositCents: 10000, receivedCents: 20000, dueCents: 0 })
+    expect(total.depositCents).toBe(10000)
+  })
+
   it('ignores void documents and documents before the period starts', () => {
     const { rows } = summarise([
       doc({ status: 'void' }),
