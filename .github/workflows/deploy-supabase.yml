@@ -19,9 +19,18 @@ jobs:
         with:
           version: latest
       - run: supabase link --project-ref "$PROJECT_REF"
-      - run: supabase db push
-      - run: |
-          supabase secrets set RESEND_API_KEY="${{ secrets.RESEND_API_KEY }}" MAIL_FROM="${{ secrets.MAIL_FROM }}"
+      # Newer CLIs default to a local database; point it at the linked project. Older ones only know --linked.
+      - run: supabase db push --remote || supabase db push --linked
+      - env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+        run: |
+          # Email secrets are optional until the Resend sender is ready; skip them when empty.
+          if [ -n "$RESEND_API_KEY" ] && [ -n "$MAIL_FROM" ]; then
+            supabase secrets set RESEND_API_KEY="$RESEND_API_KEY" MAIL_FROM="$MAIL_FROM"
+          else
+            echo "RESEND_API_KEY / MAIL_FROM not set: skipping email secrets"
+          fi
           supabase functions deploy request-code --no-verify-jwt
           supabase functions deploy record-payment --no-verify-jwt
           supabase functions deploy send-document --no-verify-jwt
