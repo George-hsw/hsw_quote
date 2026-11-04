@@ -31,8 +31,8 @@ jobs:
           else
             echo "RESEND_API_KEY / MAIL_FROM not set: skipping email secrets"
           fi
-          supabase functions deploy request-code --no-verify-jwt
-          supabase functions deploy record-payment --no-verify-jwt
-          supabase functions deploy send-document --no-verify-jwt
-          supabase functions deploy set-store-password --no-verify-jwt
-          supabase functions deploy manage-user --no-verify-jwt
+          supabase functions deploy request-code --no-verify-jwt --yes
+          supabase functions deploy record-payment --no-verify-jwt --yes
+          supabase functions deploy send-document --no-verify-jwt --yes
+          supabase functions deploy set-store-password --no-verify-jwt --yes
+          supabase functions deploy manage-user --no-verify-jwt --yes
