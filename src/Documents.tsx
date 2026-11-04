@@ -86,7 +86,7 @@ export default function Documents({ isAdmin, showBy, canPay, names, refreshKey, 
         </div>
       </div>
       <div className="filters">
-        <input type="search" name="search" aria-label="Search documents" placeholder="Search number, customer or store…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <input type="search" name="search" aria-label="Search documents" placeholder="Search documents…" value={filter} onChange={(e) => setFilter(e.target.value)} />
         {isAdmin && (
           <select name="storeFilter" aria-label="Filter by store" value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)} style={{ width: 'auto' }}>
             <option value="">All stores</option>
@@ -115,7 +115,7 @@ export default function Documents({ isAdmin, showBy, canPay, names, refreshKey, 
         </div>
       ) : (
         <div className="tablewrap">
-          <table className="book">
+          <table className="book docs">
             <thead>
               <tr><th>Number</th>{isAdmin && <th>Store</th>}<th>Customer</th>{showBy && <th>By</th>}<th className="r">Total</th><th className="r">Paid</th><th className="r">Balance</th><th>Due</th><th>Status</th><th><span className="visually-hidden">Actions</span></th></tr>
             </thead>
@@ -132,9 +132,9 @@ export default function Documents({ isAdmin, showBy, canPay, names, refreshKey, 
                     <td data-label="Customer">{d.customer_name}</td>
                     {showBy && <td data-label="By">{names[(d.created_by ?? '').toLowerCase()] ?? d.created_by ?? '–'}</td>}
                     <td data-label="Total" className="r">{money(d.total_cents)}</td>
-                    <td data-label="Paid" className="r">{inv ? money(paid) : '–'}</td>
-                    <td data-label="Balance" className="r">{inv ? money(bal) : '–'}</td>
-                    <td data-label="Due">{inv && d.due_date ? dateAU(parseDate(d.due_date)!) : '–'}</td>
+                    <td data-label="Paid" className={'r' + (inv ? '' : ' na')}>{inv ? money(paid) : '–'}</td>
+                    <td data-label="Balance" className={'r' + (inv ? '' : ' na')}>{inv ? money(bal) : '–'}</td>
+                    <td data-label="Due" className={inv ? undefined : 'na'}>{inv && d.due_date ? dateAU(parseDate(d.due_date)!) : '–'}</td>
                     <td data-label="Status">{inv ? <span className={'chip ' + (overdue ? 'overdue' : d.status)}>{overdue ? 'Overdue' : STATUS[d.status]}</span> : <span className="chip quote">Quote</span>}</td>
                     <td className="rowactions">
                       <button type="button" className="btn" onClick={() => onOpen(d)}>{inv && paid > 0 ? 'View' : 'Open'}</button>

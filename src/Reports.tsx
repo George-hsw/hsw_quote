@@ -77,7 +77,7 @@ export default function Reports({ isAdmin, stores, names }: Props) {
         <div className="state"><p>Nothing in this period</p><p className="muted">Try a longer period.</p></div>
       ) : (
         <div className="tablewrap">
-          <table className="book">
+          <table className="book reports">
             <thead><tr><th>Person</th><th className="r">Quotes</th><th className="r">Invoices</th><th className="r">Invoiced</th><th className="r">Received</th><th className="r">Still due</th></tr></thead>
             <tbody>
               {rows.map((r) => (

@@ -233,6 +233,42 @@ tr.inactive { opacity: 0.6; }
   table.book td[data-label="Store email"], table.book td[data-label="Managers"], table.book td[data-label="Name"],
   table.book td[data-label="Email"], table.book td[data-label="Person"], table.book .rowactions { grid-column: 1 / -1; }
   table.book td { overflow-wrap: anywhere; }
+  /* Documents on a phone: one compact card. Number and status on top, the customer, then the money in a row. */
+  table.book.docs tr { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2xs) var(--space-sm); padding: var(--space-sm) 0; }
+  table.book.docs td[data-label="Number"] { grid-column: 1 / span 4; order: 1; }
+  table.book.docs td[data-label="Status"] { grid-column: 5 / span 2; order: 2; justify-self: end; }
+  table.book.docs td[data-label="Customer"] { grid-column: 1 / -1; order: 3; font-weight: 600; }
+  table.book.docs td[data-label="Store"] { grid-column: 1 / -1; order: 4; }
+  table.book.docs td[data-label="By"] { grid-column: 1 / -1; order: 5; }
+  table.book.docs td[data-label="Due"] { grid-column: 1 / -1; order: 6; }
+  table.book.docs td[data-label="Total"] { grid-column: span 2; order: 7; }
+  table.book.docs td[data-label="Paid"] { grid-column: span 2; order: 8; }
+  table.book.docs td[data-label="Balance"] { grid-column: span 2; order: 9; }
+  table.book.docs td[data-label="Store"], table.book.docs td[data-label="By"], table.book.docs td[data-label="Due"] { display: flex; align-items: baseline; gap: var(--space-xs); }
+  table.book.docs td[data-label="Store"]::before, table.book.docs td[data-label="By"]::before, table.book.docs td[data-label="Due"]::before { margin: 0; min-width: 3.25rem; flex: none; }
+  table.book.docs td.na { display: none; }
+  table.book.docs td.rowactions { grid-column: 1 / -1; order: 10; margin-top: var(--space-2xs); }
+  table.book.docs td[data-label="Number"]::before, table.book.docs td[data-label="Customer"]::before, table.book.docs td[data-label="Status"]::before { display: none; }
+  table.book.docs td.r { text-align: left; }
+  /* Reports on a phone: the person, quotes and invoices side by side, then the three amounts in a row. */
+  table.book.reports tr { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2xs) var(--space-sm); padding: var(--space-sm) 0; }
+  table.book.reports td[data-label="Person"] { grid-column: 1 / -1; order: 1; font-size: var(--text-md); }
+  table.book.reports td[data-label="Quotes"], table.book.reports td[data-label="Invoices"] { grid-column: span 3; order: 2; display: flex; align-items: baseline; gap: var(--space-xs); }
+  table.book.reports td[data-label="Invoiced"], table.book.reports td[data-label="Received"], table.book.reports td[data-label="Still due"] { grid-column: span 2; order: 3; }
+  table.book.reports td[data-label="Person"]::before { display: none; }
+  table.book.reports td[data-label="Quotes"]::before, table.book.reports td[data-label="Invoices"]::before { margin: 0; }
+  table.book.reports td.r { text-align: left; }
+  /* Stores on a phone: name and Open on top, then code, managers, people and ABN as short lines. */
+  table.book.stores tr { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2xs) var(--space-sm); padding: var(--space-sm) 0; }
+  table.book.stores td[data-label="Store"] { grid-column: 1 / span 4; order: 1; font-size: var(--text-md); align-self: center; }
+  table.book.stores td.rowactions { grid-column: 5 / span 2; order: 2; margin: 0; justify-self: end; }
+  table.book.stores td[data-label="Store"]::before { display: none; }
+  table.book.stores td[data-label="Code"], table.book.stores td[data-label="People"], table.book.stores td[data-label="ABN"], table.book.stores td[data-label="Managers"] { grid-column: 1 / -1; display: flex; align-items: baseline; gap: var(--space-xs); }
+  table.book.stores td[data-label="Code"] { order: 3; } table.book.stores td[data-label="Managers"] { order: 4; } table.book.stores td[data-label="People"] { order: 5; } table.book.stores td[data-label="ABN"] { order: 6; }
+  table.book.stores td[data-label]::before { margin: 0; min-width: 4.5rem; flex: none; }
+  table.book.stores td[data-label="Store"]::before { display: none; }
+  .book tr.totalrow { background: var(--color-paper-3); border-top: var(--rule-hair) solid var(--color-ink); padding-inline: var(--space-sm); }
+  .book tr.totalrow td { background: none; border-top: 0; }
   .book tbody tr:hover td { background: none; } /* a tap leaves :hover stuck; on a phone the row is a card, not cells */
   table td.r { text-align: left; }
   table.items td.x { position: absolute; top: var(--space-xs); right: 0; } table.items td.x::before { display: none; }

@@ -31,7 +31,7 @@ export default function Stores({ stores, people, members, onChanged }: Props) {
       </div>
 
       <div className="tablewrap">
-        <table className="book">
+        <table className="book stores">
           <thead><tr><th>Store</th><th>Code</th><th>Managers</th><th>People</th><th>ABN</th><th><span className="visually-hidden">Actions</span></th></tr></thead>
           <tbody>
             {stores.map((s) => {
