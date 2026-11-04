@@ -13,20 +13,25 @@ export const DEMO = import.meta.env.VITE_DEMO === '1'
 export const ADMIN_EMAIL = 'george.mridun@hsw.com.au'
 export const MAX_STORES = 25
 
-/** admin: everything. manager: their store, all staff. staff: only their own documents. store: a shared store login (sees the whole store). */
-export type Role = 'admin' | 'manager' | 'staff' | 'store'
-export const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', manager: 'Manager', staff: 'Staff', store: 'Store login' }
+/** admin: everything, in every store. manager: a store's documents, payments and reports. staff: makes documents and sees only their own (shown as "Store"). */
+export type Role = 'admin' | 'manager' | 'staff'
+export const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', manager: 'Manager', staff: 'Store' }
 
+/** One person, one login. Which stores they are in, and as what, is in store_members. */
 export interface AppUser {
   user_id: string
   email: string
   full_name: string
-  role: 'manager' | 'staff'
-  store_id: string // their main store
-  all_stores: boolean // may use every store, not just the main one
   active: boolean
   password_set_at: string | null
   created_at: string
+}
+
+/** A person's place in one store. A person can have several. */
+export interface Member {
+  user_id: string
+  store_id: string
+  role: 'manager' | 'staff'
 }
 
 export interface StoreRow {
@@ -89,9 +94,15 @@ export const demoDocs = (): DocRow[] => [
 ]
 
 export const demoUsers = (): AppUser[] => [
-  { user_id: 'u1', email: 'priya@hsw.com.au', full_name: 'Priya Nair', role: 'manager', store_id: 'demo-0', all_stores: false, active: true, password_set_at: dayAgo(20).toISOString(), created_at: dayAgo(20).toISOString() },
-  { user_id: 'u2', email: 'sam@hsw.com.au', full_name: 'Sam Carter', role: 'staff', store_id: 'demo-0', all_stores: false, active: true, password_set_at: dayAgo(12).toISOString(), created_at: dayAgo(12).toISOString() },
-  { user_id: 'u3', email: 'lee@hsw.com.au', full_name: 'Lee Tran', role: 'staff', store_id: 'demo-1', all_stores: false, active: false, password_set_at: dayAgo(30).toISOString(), created_at: dayAgo(30).toISOString() },
+  { user_id: 'u1', email: 'priya@hsw.com.au', full_name: 'Priya Nair', active: true, password_set_at: dayAgo(20).toISOString(), created_at: dayAgo(20).toISOString() },
+  { user_id: 'u2', email: 'sam@hsw.com.au', full_name: 'Sam Carter', active: true, password_set_at: dayAgo(12).toISOString(), created_at: dayAgo(12).toISOString() },
+  { user_id: 'u3', email: 'lee@hsw.com.au', full_name: 'Lee Tran', active: false, password_set_at: dayAgo(30).toISOString(), created_at: dayAgo(30).toISOString() },
+]
+export const demoMembers = (): Member[] => [
+  { user_id: 'u1', store_id: 'demo-0', role: 'manager' },
+  { user_id: 'u1', store_id: 'demo-1', role: 'manager' }, // one person, two stores
+  { user_id: 'u2', store_id: 'demo-0', role: 'staff' },
+  { user_id: 'u3', store_id: 'demo-1', role: 'staff' },
 ]
 
 /** yyyy-mm-dd in local time (what <input type=date> and Postgres `date` use). */

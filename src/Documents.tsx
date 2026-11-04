@@ -6,6 +6,7 @@ import { DEMO, demoDocs, isoDate, supabase, type DocRow } from './lib/supabase'
 interface Props {
   isAdmin: boolean
   showBy: boolean // managers and the admin see who created each document
+  canPay: (storeId: string) => boolean // recording a payment is for managers and the admin
   names: Record<string, string> // creator email -> full name
   refreshKey: number
   onOpen: (d: DocRow) => void
@@ -19,7 +20,7 @@ const TYPES: { value: string; label: string }[] = [
   { value: 'Tax Invoice', label: 'Invoices' },
 ]
 
-export default function Documents({ isAdmin, showBy, names, refreshKey, onOpen }: Props) {
+export default function Documents({ isAdmin, showBy, canPay, names, refreshKey, onOpen }: Props) {
   const toast = useToast()
   const [docs, setDocs] = useState<DocRow[] | null>(null)
   const [failed, setFailed] = useState('')
@@ -116,7 +117,7 @@ export default function Documents({ isAdmin, showBy, names, refreshKey, onOpen }
                     <td data-label="Status">{inv ? <span className={'chip ' + (overdue ? 'overdue' : d.status)}>{overdue ? 'Overdue' : STATUS[d.status]}</span> : <span className="chip quote">Quote</span>}</td>
                     <td className="rowactions">
                       <button type="button" className="btn" onClick={() => onOpen(d)}>{inv && paid > 0 ? 'View' : 'Open'}</button>
-                      {inv && bal > 0 && d.status !== 'void' && <button type="button" className="btn primary" onClick={() => setPaying(d)}>Record payment</button>}
+                      {inv && bal > 0 && d.status !== 'void' && canPay(d.store_id) && <button type="button" className="btn primary" onClick={() => setPaying(d)}>Record payment</button>}
                     </td>
                   </tr>
                 )

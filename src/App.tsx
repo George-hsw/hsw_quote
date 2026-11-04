@@ -5,11 +5,10 @@ import Documents from './Documents'
 import Login from './Login'
 import Reports from './Reports'
 import Stores from './Stores'
-import Users from './Users'
 import { useToast } from './Toast'
-import { ADMIN_EMAIL, DEMO, demoStores, demoUsers, supabase, type AppUser, type DocRow, type Role, type StoreRow } from './lib/supabase'
+import { ADMIN_EMAIL, DEMO, demoMembers, demoStores, demoUsers, supabase, type AppUser, type DocRow, type Member, type Role, type StoreRow } from './lib/supabase'
 
-type Tab = 'new' | 'docs' | 'reports' | 'stores' | 'users'
+type Tab = 'new' | 'docs' | 'reports' | 'stores'
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined) // undefined = still checking
@@ -44,7 +43,8 @@ function Shell({ session }: { session: Session }) {
   const [openDoc, setOpenDoc] = useState<DocRow | null>(null)
   const [builderKey, setBuilderKey] = useState(0)
   const [refresh, setRefresh] = useState(0)
-  const [people, setPeople] = useState<AppUser[] | null>(null) // admin: everyone. manager: their store. staff: themselves
+  const [people, setPeople] = useState<AppUser[] | null>(null) // admin: everyone. manager: people in their stores. staff: themselves
+  const [members, setMembers] = useState<Member[]>([]) // who is in which store, and as what
 
   const loadStores = useCallback(async () => {
     if (DEMO) return setAllStores(demoStores())
@@ -54,20 +54,26 @@ function Shell({ session }: { session: Session }) {
   useEffect(() => { loadStores() }, [loadStores])
 
   const loadPeople = useCallback(async () => {
-    if (DEMO) return setPeople(demoUsers())
-    const { data } = await supabase!.from('app_users').select('*').order('full_name')
-    setPeople((data ?? []) as AppUser[])
+    if (DEMO) { setMembers(demoMembers()); return setPeople(demoUsers()) }
+    const [u, m] = await Promise.all([
+      supabase!.from('app_users').select('*').order('full_name'),
+      supabase!.from('store_members').select('user_id,store_id,role'),
+    ])
+    setMembers((m.data ?? []) as Member[])
+    setPeople((u.data ?? []) as AppUser[])
   }, [])
   useEffect(() => { loadPeople() }, [loadPeople])
 
   const me = (people ?? []).find((p) => p.user_id === session.user.id)
-  // A person has their own row; a shared store login (the original way) has none and sees the whole store.
-  const role: Role = isAdmin ? 'admin' : me?.role ?? 'store'
-  const multi = isAdmin || !!me?.all_stores // may pick the store, and sees every store's documents
-  const sees = role !== 'staff' // admin, manager and shared store logins: reports, and who created what
+  const active = (allStores ?? []).filter((s) => s.active)
+  // The caller's permission in one store. A shared store login (the original way) has no row and acts as its store's manager.
+  const roleIn = (storeId: string): Role =>
+    isAdmin ? 'admin' : members.find((m) => m.user_id === session.user.id && m.store_id === storeId)?.role ?? 'manager'
+  const multi = isAdmin || active.length > 1 // may pick the store, and sees more than one store's documents
+  const sees = isAdmin || active.some((s) => roleIn(s.id) === 'manager') // reports, and who created what
+  const canPay = (storeId: string) => roleIn(storeId) !== 'staff' // taking payments is for managers and the admin
   const names = Object.fromEntries((people ?? []).map((p) => [p.email.toLowerCase(), p.full_name]))
 
-  const active = (allStores ?? []).filter((s) => s.active)
   const go = (t: Tab) => { setTab(t); if (t === 'new') { setOpenDoc(null); setBuilderKey((k) => k + 1) } }
   const open = (d: DocRow) => { setOpenDoc(d); setBuilderKey((k) => k + 1); setTab('new') }
 
@@ -83,7 +89,6 @@ function Shell({ session }: { session: Session }) {
             <button type="button" className="tab" aria-current={tab === 'docs' ? 'page' : undefined} onClick={() => go('docs')}>Documents</button>
             {sees && <button type="button" className="tab" aria-current={tab === 'reports' ? 'page' : undefined} onClick={() => go('reports')}>Reports</button>}
             {isAdmin && <button type="button" className="tab" aria-current={tab === 'stores' ? 'page' : undefined} onClick={() => go('stores')}>Stores</button>}
-            {isAdmin && <button type="button" className="tab" aria-current={tab === 'users' ? 'page' : undefined} onClick={() => go('users')}>Users</button>}
           </nav>
           <div className="who">
             <span><span className="who-name">{isAdmin ? 'Admin' : me?.full_name ?? active[0]?.name ?? ''}</span><small>{email}</small></span>
@@ -98,13 +103,11 @@ function Shell({ session }: { session: Session }) {
             <Builder key={builderKey} email={email} isAdmin={multi} stores={active} openDoc={openDoc}
               onSaved={() => setRefresh((r) => r + 1)} onNew={() => go('new')} />
           ) : tab === 'docs' ? (
-            <Documents isAdmin={multi} showBy={sees} names={names} refreshKey={refresh} onOpen={open} />
+            <Documents isAdmin={multi} showBy={sees} canPay={canPay} names={names} refreshKey={refresh} onOpen={open} />
           ) : tab === 'reports' && sees ? (
-            <Reports isAdmin={multi} stores={allStores} names={names} />
+            <Reports isAdmin={multi} stores={active} names={names} />
           ) : tab === 'stores' && isAdmin ? (
-            <Stores stores={allStores} people={people} onChanged={loadStores} />
-          ) : tab === 'users' && isAdmin ? (
-            <Users users={people} stores={allStores} onChanged={loadPeople} />
+            <Stores stores={allStores} people={people} members={members} onChanged={() => { loadStores(); loadPeople() }} />
           ) : null}
       </main>
     </>

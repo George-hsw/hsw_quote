@@ -238,3 +238,24 @@ tr.inactive { opacity: 0.6; }
   .rowactions { display: flex; gap: var(--space-xs); } .rowactions .btn { flex: 1; } .rowactions .btn + .btn { margin-left: 0; }
   .toasts { top: 120px; }
 }
+
+/* Store popup: people and permissions */
+.modalbox.panel { max-width: 760px; }
+.modalbox.panel h3 { margin: var(--space-md) 0 var(--space-xs); }
+.modalbox.panel h4 { margin: 0 0 var(--space-xs); }
+.people { list-style: none; margin: 0; padding: 0; }
+.people li { padding: var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); display: grid; gap: var(--space-xs); }
+.people li.inactive .who-line b { color: var(--color-muted); }
+.who-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-xs); overflow-wrap: anywhere; }
+.person-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center; }
+.person-actions select { width: auto; min-height: 36px; }
+.person-actions .btn { min-height: 36px; }
+.btn.danger { color: var(--color-error); }
+.addperson { margin-top: var(--space-md); padding-top: var(--space-md); border-top: var(--rule-hair) solid var(--color-ink); }
+.storedetails { margin-top: var(--space-md); border-top: var(--rule-hair) solid var(--color-ink); padding-top: var(--space-sm); }
+.storedetails summary { font-weight: 600; cursor: pointer; min-height: 40px; display: flex; align-items: center; }
+.storedetails .actions { margin-top: var(--space-md); }
+@media (max-width: 640px) {
+  .person-actions select { flex: 1 1 100%; }
+  .person-actions .btn { flex: 1 1 calc(50% - var(--space-xs)); }
+}

@@ -1,36 +1,51 @@
-// Who is calling, and what may they touch? The same rules as the database (migration 010), for the functions
+// Who is calling, and what may they touch? The same rules as the database (migration 012), for the functions
 // that use the service role and so bypass Row Level Security.
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { ADMIN_EMAIL } from './cors.ts'
 
-export type Role = 'admin' | 'manager' | 'staff' | 'store'
-export interface Access { role: Role; storeId: string | null; allStores: boolean }
+export type StoreRole = 'manager' | 'staff'
+/** What the caller may do in each store they belong to. admin: every store. */
+export interface Access { admin: boolean; stores: Record<string, StoreRole> }
 
-/** null = this person may not use the app (unknown, inactive, or their store is inactive). */
+/** null = this person may not use the app (unknown, or turned off). */
 export async function accessOf(admin: SupabaseClient, userId: string | undefined, email: string): Promise<Access | null> {
-  if (email === ADMIN_EMAIL) return { role: 'admin', storeId: null, allStores: true }
+  if (email === ADMIN_EMAIL) return { admin: true, stores: {} }
+  const stores: Record<string, StoreRole> = {}
   if (userId) {
-    const { data: person } = await admin.from('app_users').select('role,store_id,active,all_stores,stores(active)').eq('user_id', userId).maybeSingle()
+    const { data: person } = await admin.from('app_users').select('active').eq('user_id', userId).maybeSingle()
     if (person) {
-      const storeActive = (person.stores as { active: boolean } | null)?.active
-      return person.active && (storeActive || person.all_stores) ? { role: person.role as Role, storeId: person.store_id, allStores: !!person.all_stores } : null
+      if (!person.active) return null
+      const { data: mine } = await admin.from('store_members').select('store_id,role,stores(active)').eq('user_id', userId)
+      for (const m of mine ?? []) if ((m.stores as { active: boolean } | null)?.active) stores[m.store_id] = m.role as StoreRole
     }
   }
-  const { data: stores } = await admin.from('stores').select('id,email').eq('active', true)
-  const shared = (stores ?? []).find((s) => String(s.email ?? '').toLowerCase() === email)
-  return shared ? { role: 'store', storeId: shared.id, allStores: false } : null
+  // A shared store login (stores.email, the original way) acts as a manager of its store.
+  const { data: shared } = await admin.from('stores').select('id,email').eq('active', true)
+  for (const s of shared ?? []) if (String(s.email ?? '').toLowerCase() === email) stores[s.id] = 'manager'
+  return Object.keys(stores).length ? { admin: false, stores } : null
+}
+
+type Doc = { store_id: string; created_by: string | null }
+
+/** Admin: any document. Manager: any document in their store. Staff: only the ones they created. */
+export function canActOnDoc(a: Access | null, doc: Doc, email: string): boolean {
+  if (!a) return false
+  if (a.admin) return true
+  const role = a.stores[doc.store_id]
+  if (role === 'manager') return true
+  return role === 'staff' && String(doc.created_by ?? '').toLowerCase() === email
+}
+
+/** Recording a payment is for managers and the admin. Staff can make and send documents but not take money. */
+export function canTakePayment(a: Access | null, doc: Doc): boolean {
+  return !!a && (a.admin || a.stores[doc.store_id] === 'manager')
 }
 
 /** The people who run a store: its active managers. Payment notices and copies go to them, so there is no separate owner email to keep in step. */
 export async function managerEmails(admin: SupabaseClient, storeId: string): Promise<string[]> {
-  const { data } = await admin.from('app_users').select('email').eq('store_id', storeId).eq('role', 'manager').eq('active', true)
-  return (data ?? []).map((m) => String(m.email).toLowerCase())
-}
-
-/** Admin and anyone with all stores: any store. Manager and shared store login: any document in their store. Staff: only their own. */
-export function canActOnDoc(a: Access | null, doc: { store_id: string; created_by: string | null }, email: string): boolean {
-  if (!a) return false
-  if (a.role === 'admin') return true
-  if (!a.allStores && a.storeId !== doc.store_id) return false
-  return a.role !== 'staff' || String(doc.created_by ?? '').toLowerCase() === email
+  const { data } = await admin.from('store_members').select('app_users(email,active)').eq('store_id', storeId).eq('role', 'manager')
+  return (data ?? [])
+    .map((m) => m.app_users as unknown as { email: string; active: boolean } | null)
+    .filter((p): p is { email: string; active: boolean } => !!p && p.active)
+    .map((p) => p.email.toLowerCase())
 }

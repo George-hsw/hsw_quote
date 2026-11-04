@@ -7,18 +7,19 @@ Money rules match the workbook: prices include GST, GST = total ÷ 11, line = qt
 numbers `Q-<STORE>-<n>` / `INV-<STORE>-<n>`, quote valid 30 days, invoice due 7 days (or a chosen date).
 
 ## Who can do what
-| | Staff | Manager | Admin (`george.mridun@hsw.com.au`) |
+Everything about people happens on the **Stores** tab: open a store and a popup lists who is in it, lets you add someone, change their permission, reset their password, turn them off, take them out of the store, or delete them.
+
+| | Store | Manager | Admin (`george.mridun@hsw.com.au`) |
 |---|---|---|---|
 | Sign in | own email + password | own email + password | own email + password |
-| Stores | one | one, or all stores | all stores |
-| Quotes / invoices | create, and see only their own | see **all** at their store (and edit them) | all stores |
-| Record payment / deposit | on their own invoices | on any invoice at their store | any store |
-| Reports (by person) | no | their store | any store or all |
-| Add users, reset passwords, manage stores | no | no | yes |
+| Quotes / invoices | make them; see and edit only their own | see and edit **all** at the store | all stores |
+| Record payment / deposit | no | yes, at the store | any store |
+| Reports (by person) | no | yes, for the store | any store or all |
+| Add or delete people and stores, reset passwords | no | no | yes |
 
-Each person has their own login, one store and one role, so every document shows who created it. The admin creates them on the **Users** tab (the `manage-user` function); passwords are generated and shown once, or chosen by the admin. **Turn off** stops someone signing in straight away without deleting their documents. A shared store login (the `email` on the Stores tab) still works and sees the whole store like a manager, so existing stores keep working while people are moved to their own logins.
+One person has one login and can be in several stores, with a different permission in each (add the same email to another store and they get it without a new password). Only the admin is built in; everyone else is a Manager or Store in each store they belong to. Every document shows who created it. **Turn off** stops someone signing in straight away without deleting their documents; **Delete user** removes the login but the quotes and invoices they made stay. A store with quotes or invoices cannot be deleted, only turned off. A store's managers receive its payment notices and a copy of what it sends. There is no emailed sign-in code: anyone stuck contacts support@hsw.com.au and the admin resets their password from the store popup.
 
-Enforced by Row Level Security (`supabase/migrations/002_*.sql`, `010_roles.sql`), not just the UI, and again in the `record-payment` and `send-document` functions (`_shared/access.ts`). Payments can only be written by the `record-payment` function. Once an invoice has a payment it is frozen. Who created a document never changes when someone else edits it.
+Enforced by Row Level Security (`supabase/migrations/002_*.sql`, `012_store_members.sql`), not just the UI, and again in the `record-payment` and `send-document` functions (`_shared/access.ts`). Payments can only be written by the `record-payment` function. Once an invoice has a payment it is frozen. Who created a document never changes when someone else edits it.
 
 ## Data flow
 ```
@@ -53,7 +54,7 @@ Prices change in Dynamics, not in this app. To refresh sooner than overnight, ru
 1. **Supabase project**: Authentication → Sign In / Providers → Email: keep **Email** on, and turn **off** "Allow new users to sign up". That is the only Auth setting needed.
    **Your admin password:** Authentication → Users → *Add user* → create `george.mridun@hsw.com.au` with a strong password and tick *Auto Confirm User*. You sign in with it, and it is the only password created by hand.
    **Store passwords:** sign in as admin → **Stores** → *Set password* for each store. A strong random password is generated and shown once to hand to the store (or choose one yourself). Supabase Auth keeps only a hash of it in its own protected area; **no password or hash is ever stored in this repo or in the app's tables**, only the date it was set. Reset any time with *Reset password*.
-   **Sign-in help:** there is no emailed sign-in code. The sign-in screen tells anyone who is stuck to contact support@hsw.com.au, and the admin resets their password on the **Users** tab.
+   **Sign-in help:** there is no emailed sign-in code. The sign-in screen tells anyone who is stuck to contact support@hsw.com.au, and the admin resets their password from the store popup.
 2. **Vercel**: import the GitHub repo (framework Vite, no other settings). Project → Settings → Environment Variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (public by design), plus `VITE_ADOBE_FONTS_KIT` to turn on Myriad Pro (below). Vercel needs no service key: it deploys the committed price copy, and redeploys on every push.
 3. **GitHub repo secrets**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`,
    `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`, `RESEND_API_KEY`, `MAIL_FROM` (e.g. `HSW Quotes <quotes@hsw.com.au>`, a Resend-verified domain),
@@ -65,7 +66,7 @@ Prices change in Dynamics, not in this app. To refresh sooner than overnight, ru
 4. Run **Deploy Supabase** (creates tables, loads the store list, deploys the functions), then seed prices once:
    `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/seed-supabase.mjs`.
 5. **Myriad Pro**: it is an Adobe font and cannot be bundled. In Adobe Fonts (fonts.adobe.com, included with Creative Cloud), add Myriad Pro to a web project with the Vercel domain, tick the weights Light, Regular, Semibold and Bold, then put the project id in `VITE_ADOBE_FONTS_KIT`. The app uses Myriad Pro Light for body text. Until then the app uses Source Sans 3, a close free match. The PDF uses Helvetica.
-6. Sign in as the admin → **Stores**: set each store's legal name, ABN and bank details. Then **Users**: add each manager and staff member with a store and a role, and hand over the password shown. A store's managers are its owners for email: they get its payment notices and a copy of what it sends, so no owner email is typed separately.
+6. Sign in as the admin → **Stores**: set each store's legal name, ABN and bank details. Then open each store to add its people: managers and Store staff, and hand over the password shown. A store's managers are its owners for email: they get its payment notices and a copy of what it sends, so no owner email is typed separately.
 
 ## Emailing quotes and invoices
 
