@@ -9,8 +9,8 @@ interface Props {
   onChanged: () => void
 }
 
-type Draft = { user_id?: string; email: string; full_name: string; role: AppUser['role']; store_id: string }
-const blank = (storeId: string): Draft => ({ email: '', full_name: '', role: 'staff', store_id: storeId })
+type Draft = { user_id?: string; email: string; full_name: string; role: AppUser['role']; store_id: string; all_stores: boolean }
+const blank = (storeId: string): Draft => ({ email: '', full_name: '', role: 'staff', store_id: storeId, all_stores: false })
 
 /** Admin only: the people who sign in. Each has their own login, one store and one role. */
 export default function Users({ users, stores, onChanged }: Props) {
@@ -40,7 +40,7 @@ export default function Users({ users, stores, onChanged }: Props) {
     if (!draft) return
     if (!draft.user_id) { setCreating(draft); setDraft(null); return } // the password dialog does the create
     setBusy(true)
-    const ok = await call({ action: 'update', user_id: draft.user_id, full_name: draft.full_name, role: draft.role, store_id: draft.store_id })
+    const ok = await call({ action: 'update', user_id: draft.user_id, full_name: draft.full_name, role: draft.role, store_id: draft.store_id, all_stores: draft.all_stores })
     setBusy(false)
     if (!ok) return
     toast.success(`${draft.full_name} saved.`)
@@ -86,10 +86,13 @@ export default function Users({ users, stores, onChanged }: Props) {
                   <option value="manager">Manager: sees the whole store, and reports</option>
                 </select>
               </label>
-              <label>Store
+              <label>{draft.all_stores ? 'Main store' : 'Store'}
                 <select name="store" required value={draft.store_id} onChange={(e) => setDraft({ ...draft, store_id: e.target.value })}>
                   {active.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
+              </label>
+              <label className="inline">
+                <input name="all_stores" type="checkbox" checked={draft.all_stores} onChange={(e) => setDraft({ ...draft, all_stores: e.target.checked })} /> Can use every store, not just this one
               </label>
             </div>
             <div className="actions" style={{ marginTop: 'var(--space-md)' }}>
@@ -112,11 +115,11 @@ export default function Users({ users, stores, onChanged }: Props) {
                   <td data-label="Name"><b>{u.full_name}</b></td>
                   <td data-label="Email">{u.email}</td>
                   <td data-label="Role"><span className="chip">{ROLE_LABEL[u.role]}</span></td>
-                  <td data-label="Store">{storeName(u.store_id)}</td>
+                  <td data-label="Store">{u.all_stores ? <span className="chip">All stores</span> : storeName(u.store_id)}</td>
                   <td data-label="Status">{u.active ? <span className="chip paid">Active</span> : <span className="chip warn">Cannot sign in</span>}</td>
                   <td className="rowactions">
                     <button type="button" className="btn" onClick={() => setResetFor(u)}>Reset password</button>
-                    <button type="button" className="btn" onClick={() => setDraft({ user_id: u.user_id, email: u.email, full_name: u.full_name, role: u.role, store_id: u.store_id })}>Edit</button>
+                    <button type="button" className="btn" onClick={() => setDraft({ user_id: u.user_id, email: u.email, full_name: u.full_name, role: u.role, store_id: u.store_id, all_stores: u.all_stores })}>Edit</button>
                     <button type="button" className="btn" onClick={() => setActive(u, !u.active)}>{u.active ? 'Turn off' : 'Turn on'}</button>
                   </td>
                 </tr>
@@ -128,7 +131,7 @@ export default function Users({ users, stores, onChanged }: Props) {
 
       {creating && (
         <PasswordDialog name={creating.full_name} email={creating.email} fn="manage-user"
-          body={{ action: 'create', email: creating.email, full_name: creating.full_name, role: creating.role, store_id: creating.store_id }}
+          body={{ action: 'create', email: creating.email, full_name: creating.full_name, role: creating.role, store_id: creating.store_id, all_stores: creating.all_stores }}
           onClose={() => setCreating(null)} onDone={onChanged} />
       )}
       {resetFor && (

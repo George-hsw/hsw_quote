@@ -10,6 +10,7 @@ numbers `Q-<STORE>-<n>` / `INV-<STORE>-<n>`, quote valid 30 days, invoice due 7 
 | | Staff | Manager | Admin (`george.mridun@hsw.com.au`) |
 |---|---|---|---|
 | Sign in | own email + password | own email + password | own email + password |
+| Stores | one | one, or all stores | all stores |
 | Quotes / invoices | create, and see only their own | see **all** at their store (and edit them) | all stores |
 | Record payment / deposit | on their own invoices | on any invoice at their store | any store |
 | Reports (by person) | no | their store | any store or all |
@@ -52,7 +53,7 @@ Prices change in Dynamics, not in this app. To refresh sooner than overnight, ru
 1. **Supabase project**: Authentication → Sign In / Providers → Email: keep **Email** on, and turn **off** "Allow new users to sign up". That is the only Auth setting needed.
    **Your admin password:** Authentication → Users → *Add user* → create `george.mridun@hsw.com.au` with a strong password and tick *Auto Confirm User*. You sign in with it, and it is the only password created by hand.
    **Store passwords:** sign in as admin → **Stores** → *Set password* for each store. A strong random password is generated and shown once to hand to the store (or choose one yourself). Supabase Auth keeps only a hash of it in its own protected area; **no password or hash is ever stored in this repo or in the app's tables**, only the date it was set. Reset any time with *Reset password*.
-   **Backup sign-in:** *Forgot password? Get a code* emails a 6-digit code. Supabase generates it and the `request-code` function emails it through Resend, so Supabase's own SMTP and email templates are not used. This only needs a sending domain verified in Resend (DNS records). Until then, set `MAIL_FROM` to `Howards Quote <onboarding@resend.dev>`, which Resend delivers only to the address that owns the Resend account. Passwords work without any email setup.
+   **Sign-in help:** there is no emailed sign-in code. The sign-in screen tells anyone who is stuck to contact support@hsw.com.au, and the admin resets their password on the **Users** tab.
 2. **Vercel**: import the GitHub repo (framework Vite, no other settings). Project → Settings → Environment Variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (public by design), plus `VITE_ADOBE_FONTS_KIT` to turn on Myriad Pro (below). Vercel needs no service key: it deploys the committed price copy, and redeploys on every push.
 3. **GitHub repo secrets**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`,
    `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`, `RESEND_API_KEY`, `MAIL_FROM` (e.g. `HSW Quotes <quotes@hsw.com.au>`, a Resend-verified domain),

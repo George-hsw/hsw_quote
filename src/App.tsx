@@ -63,6 +63,7 @@ function Shell({ session }: { session: Session }) {
   const me = (people ?? []).find((p) => p.user_id === session.user.id)
   // A person has their own row; a shared store login (the original way) has none and sees the whole store.
   const role: Role = isAdmin ? 'admin' : me?.role ?? 'store'
+  const multi = isAdmin || !!me?.all_stores // may pick the store, and sees every store's documents
   const sees = role !== 'staff' // admin, manager and shared store logins: reports, and who created what
   const names = Object.fromEntries((people ?? []).map((p) => [p.email.toLowerCase(), p.full_name]))
 
@@ -94,12 +95,12 @@ function Shell({ session }: { session: Session }) {
         {!allStores || !people ? <p className="muted">Loading…</p>
           : noAccess ? <p className="note bad">This email is not linked to an active store. Ask the admin ({ADMIN_EMAIL}).</p>
           : tab === 'new' ? (
-            <Builder key={builderKey} email={email} isAdmin={isAdmin} stores={active} openDoc={openDoc}
+            <Builder key={builderKey} email={email} isAdmin={multi} stores={active} openDoc={openDoc}
               onSaved={() => setRefresh((r) => r + 1)} onNew={() => go('new')} />
           ) : tab === 'docs' ? (
-            <Documents isAdmin={isAdmin} showBy={sees} names={names} refreshKey={refresh} onOpen={open} />
+            <Documents isAdmin={multi} showBy={sees} names={names} refreshKey={refresh} onOpen={open} />
           ) : tab === 'reports' && sees ? (
-            <Reports isAdmin={isAdmin} stores={allStores} names={names} />
+            <Reports isAdmin={multi} stores={allStores} names={names} />
           ) : tab === 'stores' && isAdmin ? (
             <Stores stores={allStores} people={people} onChanged={loadStores} />
           ) : tab === 'users' && isAdmin ? (

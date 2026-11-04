@@ -1,6 +1,7 @@
 // Admin only. Creates and manages the people who sign in: managers and staff, each tied to one store.
-//   create          { email, full_name, role: 'manager'|'staff', store_id, password? }
-//   update          { user_id, full_name?, role?, store_id?, active? }
+//   create          { email, full_name, role: 'manager'|'staff', store_id, all_stores?, password? }
+//   update          { user_id, full_name?, role?, store_id?, all_stores?, active? }
+// store_id is the person's main store; all_stores lets them use every store.
 //   reset_password  { user_id, password? }
 // With no password in the request a strong random one is generated and returned ONCE, to hand to the person.
 // Supabase Auth hashes and stores it; this function never keeps or logs it.
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
       } else userId = created.data.user.id
 
       const { error } = await admin.from('app_users').insert({
-        user_id: userId, email, full_name: fullName, role: b.role, store_id: store.id, active: true,
+        user_id: userId, email, full_name: fullName, role: b.role, store_id: store.id, all_stores: b.all_stores === true, active: true,
         password_set_at: new Date().toISOString(),
       })
       if (error) throw error
@@ -92,6 +93,7 @@ Deno.serve(async (req) => {
         if (!store?.active) return json({ error: 'Choose an active store.' }, 400)
         patch.store_id = store.id
       }
+      if (typeof b.all_stores === 'boolean') patch.all_stores = b.all_stores
       if (typeof b.active === 'boolean') {
         patch.active = b.active
         // Also block sign-in itself, so a deactivated person cannot even start a new session.

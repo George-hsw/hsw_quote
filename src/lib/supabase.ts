@@ -22,7 +22,8 @@ export interface AppUser {
   email: string
   full_name: string
   role: 'manager' | 'staff'
-  store_id: string
+  store_id: string // their main store
+  all_stores: boolean // may use every store, not just the main one
   active: boolean
   password_set_at: string | null
   created_at: string
@@ -88,9 +89,9 @@ export const demoDocs = (): DocRow[] => [
 ]
 
 export const demoUsers = (): AppUser[] => [
-  { user_id: 'u1', email: 'priya@hsw.com.au', full_name: 'Priya Nair', role: 'manager', store_id: 'demo-0', active: true, password_set_at: dayAgo(20).toISOString(), created_at: dayAgo(20).toISOString() },
-  { user_id: 'u2', email: 'sam@hsw.com.au', full_name: 'Sam Carter', role: 'staff', store_id: 'demo-0', active: true, password_set_at: dayAgo(12).toISOString(), created_at: dayAgo(12).toISOString() },
-  { user_id: 'u3', email: 'lee@hsw.com.au', full_name: 'Lee Tran', role: 'staff', store_id: 'demo-1', active: false, password_set_at: dayAgo(30).toISOString(), created_at: dayAgo(30).toISOString() },
+  { user_id: 'u1', email: 'priya@hsw.com.au', full_name: 'Priya Nair', role: 'manager', store_id: 'demo-0', all_stores: false, active: true, password_set_at: dayAgo(20).toISOString(), created_at: dayAgo(20).toISOString() },
+  { user_id: 'u2', email: 'sam@hsw.com.au', full_name: 'Sam Carter', role: 'staff', store_id: 'demo-0', all_stores: false, active: true, password_set_at: dayAgo(12).toISOString(), created_at: dayAgo(12).toISOString() },
+  { user_id: 'u3', email: 'lee@hsw.com.au', full_name: 'Lee Tran', role: 'staff', store_id: 'demo-1', all_stores: false, active: false, password_set_at: dayAgo(30).toISOString(), created_at: dayAgo(30).toISOString() },
 ]
 
 /** yyyy-mm-dd in local time (what <input type=date> and Postgres `date` use). */
