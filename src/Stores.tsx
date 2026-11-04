@@ -58,7 +58,7 @@ export default function Stores({ stores, onChanged }: Props) {
       <div className="pagehead">
         <div>
           <h1>Stores</h1>
-          <p className="muted">Using {activeCount} of {MAX_STORES} active stores. A store’s <b>login email</b> receives the sign-in code; the <b>franchise owner email</b> receives payment notifications.</p>
+          <p className="muted">Using {activeCount} of {MAX_STORES} active stores. A store’s <b>login email</b> is what it signs in with; the <b>franchise owner email</b> receives payment notifications.</p>
         </div>
         <div className="actions">
           <button type="button" className="btn primary" disabled={activeCount >= MAX_STORES} onClick={() => setDraft(blank())}>Add store</button>
