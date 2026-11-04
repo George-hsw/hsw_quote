@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useToast } from './Toast'
-import { DEMO, supabase, type StoreRow } from './lib/supabase'
+import { DEMO, supabase } from './lib/supabase'
 
 interface Props {
-  store: StoreRow
+  name: string // who the password is for
+  email: string | null // what they sign in with
+  fn: string // the edge function that sets it: set-store-password or manage-user
+  body: Record<string, unknown> // what that function needs besides the password (which store, or which person)
   onClose: () => void
   onDone: () => void // the password was set; refresh the list
 }
 
-/** Admin only: set a store's sign-in password. A generated one is shown once, to hand to the store. */
-export default function PasswordDialog({ store, onClose, onDone }: Props) {
+/** Admin only: set a sign-in password for a store or a person. A generated one is shown once, to hand over. */
+export default function PasswordDialog({ name, email, fn, body, onClose, onDone }: Props) {
   const toast = useToast()
   const [mode, setMode] = useState<'generate' | 'own'>('generate')
   const [own, setOwn] = useState('')
@@ -34,8 +37,8 @@ export default function PasswordDialog({ store, onClose, onDone }: Props) {
     }
     if (!supabase) return
     setBusy(true)
-    const { data, error } = await supabase.functions.invoke('set-store-password', {
-      body: { store_id: store.id, password: mode === 'own' ? own : undefined },
+    const { data, error } = await supabase.functions.invoke(fn, {
+      body: { ...body, password: mode === 'own' ? own : undefined },
     })
     setBusy(false)
     if (error || data?.error) {
@@ -44,7 +47,7 @@ export default function PasswordDialog({ store, onClose, onDone }: Props) {
       return toast.error(msg ?? 'Could not set the password.')
     }
     if (data.generated) setShown(data.password)
-    else { toast.success(`Password set for ${store.name}.`); onDone(); onClose() }
+    else { toast.success(`Password set for ${name}.`); onDone(); onClose() }
   }
 
   const copy = async () => {
@@ -56,12 +59,12 @@ export default function PasswordDialog({ store, onClose, onDone }: Props) {
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="pw-title">
       <div className="modalbox">
-        <h2 id="pw-title">Password for {store.name}</h2>
+        <h2 id="pw-title">Password for {name}</h2>
         {shown !== null ? (
           <>
-            <p>Give this to the store. It is shown <b>only once</b> and cannot be looked up later, only reset.</p>
+            <p>Give this to the person who will sign in. It is shown <b>only once</b> and cannot be looked up later, only reset.</p>
             <p className="secret" aria-label="The new password">{shown}</p>
-            <p className="muted">They sign in with <b>{store.email}</b> and this password.</p>
+            <p className="muted">They sign in with <b>{email}</b> and this password.</p>
             <div className="actions">
               <button type="button" className="btn" onClick={copy}>Copy password</button>
               <button type="button" className="btn primary" autoFocus onClick={() => { onDone(); onClose() }}>I have saved it</button>
@@ -69,7 +72,7 @@ export default function PasswordDialog({ store, onClose, onDone }: Props) {
           </>
         ) : (
           <form onSubmit={submit}>
-            <p className="muted">Login email: {store.email}. Setting a new password replaces the old one straight away.</p>
+            <p className="muted">Login email: {email}. Setting a new password replaces the old one straight away.</p>
             <div className="segmented" role="group" aria-label="How to choose the password">
               <button type="button" aria-pressed={mode === 'generate'} onClick={() => setMode('generate')}>Generate a strong one</button>
               <button type="button" aria-pressed={mode === 'own'} onClick={() => setMode('own')}>Choose my own</button>

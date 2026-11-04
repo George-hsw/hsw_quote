@@ -2,7 +2,8 @@
 // what was received, the balance still due, and the due date.
 // Needs secrets: RESEND_API_KEY, MAIL_FROM (e.g. "HSW Quotes <quotes@hsw.com.au>")
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { ADMIN_EMAIL, cors, json } from '../_shared/cors.ts'
+import { cors, json } from '../_shared/cors.ts'
+import { accessOf, canActOnDoc } from '../_shared/access.ts'
 
 const aud = (cents: number) =>
   '$' + (cents / 100).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -31,8 +32,8 @@ Deno.serve(async (req) => {
     const { data: doc } = await admin.from('documents').select('*, stores(*)').eq('id', b.document_id).single()
     if (!doc) return json({ error: 'Invoice not found' }, 404)
     const store = doc.stores
-    if (callerEmail !== ADMIN_EMAIL && callerEmail !== String(store.email ?? '').toLowerCase())
-      return json({ error: 'Not allowed for this store' }, 403)
+    if (!canActOnDoc(await accessOf(admin, u.user?.id, callerEmail), doc, callerEmail))
+      return json({ error: 'Not allowed for this document' }, 403)
     if (doc.doc_type !== 'Tax Invoice') return json({ error: 'Payments can only be recorded on a Tax Invoice' }, 400)
     if (doc.status === 'void') return json({ error: 'This invoice is void' }, 400)
 

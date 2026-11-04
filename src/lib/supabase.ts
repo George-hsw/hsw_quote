@@ -13,6 +13,21 @@ export const DEMO = import.meta.env.VITE_DEMO === '1'
 export const ADMIN_EMAIL = 'george.mridun@hsw.com.au'
 export const MAX_STORES = 25
 
+/** admin: everything. manager: their store, all staff. staff: only their own documents. store: a shared store login (sees the whole store). */
+export type Role = 'admin' | 'manager' | 'staff' | 'store'
+export const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', manager: 'Manager', staff: 'Staff', store: 'Store login' }
+
+export interface AppUser {
+  user_id: string
+  email: string
+  full_name: string
+  role: 'manager' | 'staff'
+  store_id: string
+  active: boolean
+  password_set_at: string | null
+  created_at: string
+}
+
 export interface StoreRow {
   id: string
   name: string
@@ -46,6 +61,7 @@ export interface DocRow {
   total_cents: number
   due_date: string | null
   status: 'open' | 'part_paid' | 'paid' | 'void'
+  created_by: string | null
   created_at: string
   payload: unknown
   stores: { name: string } | null
@@ -63,12 +79,18 @@ export const demoStores = (): StoreRow[] =>
 const dayAgo = (n: number) => new Date(Date.now() - n * 864e5)
 export const demoDocs = (): DocRow[] => [
   { id: 'd1', store_id: 'demo-0', doc_type: 'Tax Invoice', doc_number: 'INV-MPK-1001', customer_name: 'Jo Smith', total_cents: 247187,
-    due_date: isoDate(dayAgo(-4)), status: 'part_paid', created_at: dayAgo(3).toISOString(), payload: {}, stores: { name: 'Moore Park' },
+    due_date: isoDate(dayAgo(-4)), status: 'part_paid', created_by: 'sam@hsw.com.au', created_at: dayAgo(3).toISOString(), payload: {}, stores: { name: 'Moore Park' },
     payments: [{ amount_cents: 50000, kind: 'deposit', paid_on: isoDate(dayAgo(3)) }] },
   { id: 'd2', store_id: 'demo-1', doc_type: 'Tax Invoice', doc_number: 'INV-NTB-2040', customer_name: 'A. Nguyen', total_cents: 89900,
-    due_date: isoDate(dayAgo(2)), status: 'open', created_at: dayAgo(9).toISOString(), payload: {}, stores: { name: 'Northbridge' }, payments: [] },
+    due_date: isoDate(dayAgo(2)), status: 'open', created_by: 'lee@hsw.com.au', created_at: dayAgo(9).toISOString(), payload: {}, stores: { name: 'Northbridge' }, payments: [] },
   { id: 'd3', store_id: 'demo-0', doc_type: 'Quote', doc_number: 'Q-MPK-1002', customer_name: 'Pat Lee', total_cents: 129500,
-    due_date: null, status: 'open', created_at: dayAgo(1).toISOString(), payload: {}, stores: { name: 'Moore Park' }, payments: [] },
+    due_date: null, status: 'open', created_by: 'priya@hsw.com.au', created_at: dayAgo(1).toISOString(), payload: {}, stores: { name: 'Moore Park' }, payments: [] },
+]
+
+export const demoUsers = (): AppUser[] => [
+  { user_id: 'u1', email: 'priya@hsw.com.au', full_name: 'Priya Nair', role: 'manager', store_id: 'demo-0', active: true, password_set_at: dayAgo(20).toISOString(), created_at: dayAgo(20).toISOString() },
+  { user_id: 'u2', email: 'sam@hsw.com.au', full_name: 'Sam Carter', role: 'staff', store_id: 'demo-0', active: true, password_set_at: dayAgo(12).toISOString(), created_at: dayAgo(12).toISOString() },
+  { user_id: 'u3', email: 'lee@hsw.com.au', full_name: 'Lee Tran', role: 'staff', store_id: 'demo-1', active: false, password_set_at: dayAgo(30).toISOString(), created_at: dayAgo(30).toISOString() },
 ]
 
 /** yyyy-mm-dd in local time (what <input type=date> and Postgres `date` use). */

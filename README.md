@@ -7,15 +7,17 @@ Money rules match the workbook: prices include GST, GST = total ÷ 11, line = qt
 numbers `Q-<STORE>-<n>` / `INV-<STORE>-<n>`, quote valid 30 days, invoice due 7 days (or a chosen date).
 
 ## Who can do what
-| | Store login | Admin (`george.mridun@hsw.com.au`) |
-|---|---|---|
-| Sign in | login email + password (set by the admin); emailed 6-digit code as a backup | same |
-| Quotes / invoices | own store only | all stores |
-| Record payment / deposit | own store | any store |
-| Manage stores, emails, ABN, bank | no | yes (max 25 active stores) |
+| | Staff | Manager | Admin (`george.mridun@hsw.com.au`) |
+|---|---|---|---|
+| Sign in | own email + password | own email + password | own email + password |
+| Quotes / invoices | create, and see only their own | see **all** at their store (and edit them) | all stores |
+| Record payment / deposit | on their own invoices | on any invoice at their store | any store |
+| Reports (by person) | no | their store | any store or all |
+| Add users, reset passwords, manage stores | no | no | yes |
 
-Enforced by Row Level Security in `supabase/migrations/002_*.sql`, not just the UI. Payments can only be written by the
-`record-payment` edge function. Once an invoice has a payment it is frozen.
+Each person has their own login, one store and one role, so every document shows who created it. The admin creates them on the **Users** tab (the `manage-user` function); passwords are generated and shown once, or chosen by the admin. **Turn off** stops someone signing in straight away without deleting their documents. A shared store login (the `email` on the Stores tab) still works and sees the whole store like a manager, so existing stores keep working while people are moved to their own logins.
+
+Enforced by Row Level Security (`supabase/migrations/002_*.sql`, `010_roles.sql`), not just the UI, and again in the `record-payment` and `send-document` functions (`_shared/access.ts`). Payments can only be written by the `record-payment` function. Once an invoice has a payment it is frozen. Who created a document never changes when someone else edits it.
 
 ## Data flow
 ```
@@ -59,10 +61,10 @@ Prices change in Dynamics, not in this app. To refresh sooner than overnight, ru
    **The server must be reachable from GitHub's servers over the internet** (an https address). If the NAV service is only on the internal network, the nightly job cannot reach it: use a self-hosted runner inside the network, or publish the service through a secure gateway.
    Before the first sync, check the connection and the field names from your own computer:
    `DYN_ODATA_URL=… DYN_USER=… DYN_ACCESS_KEY=… node scripts/sync-dynamics.mjs --discover`
-4. Run **Deploy Supabase** (creates tables, seeds the 23 stores, deploys the functions), then seed prices once:
+4. Run **Deploy Supabase** (creates tables, loads the store list, deploys the functions), then seed prices once:
    `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/seed-supabase.mjs`.
 5. **Myriad Pro**: it is an Adobe font and cannot be bundled. In Adobe Fonts (fonts.adobe.com, included with Creative Cloud), add Myriad Pro to a web project with the Vercel domain, tick the weights Light, Regular, Semibold and Bold, then put the project id in `VITE_ADOBE_FONTS_KIT`. The app uses Myriad Pro Light for body text. Until then the app uses Source Sans 3, a close free match. The PDF uses Helvetica.
-6. Sign in as the admin → **Stores**: set each store's login email, franchise owner email, legal name, ABN and bank details.
+6. Sign in as the admin → **Stores**: set each store's franchise owner email, legal name, ABN and bank details. Then **Users**: add each manager and staff member with a store and a role, and hand over the password shown.
 
 ## Emailing quotes and invoices
 

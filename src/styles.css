@@ -154,6 +154,7 @@ td.x .btn:hover { color: var(--color-error); }
 .rowactions .btn { min-height: 36px; }
 .rowactions .btn + .btn { margin-left: var(--space-xs); }
 tr.inactive { opacity: 0.6; }
+.book tr.totalrow td { border-top: var(--rule-hair) solid var(--color-ink); background: var(--color-paper-3); }
 .filters { display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-md); }
 .filters input[type="search"] { flex: 1; min-width: 220px; }
 
@@ -207,7 +208,8 @@ tr.inactive { opacity: 0.6; }
 }
 @media (max-width: 44rem) {
   .bar { flex-wrap: wrap; gap: var(--space-xs) var(--space-md); min-height: 0; padding-block: var(--space-sm); } .logo { height: 28px; }
-  nav { order: 3; flex-basis: 100%; } .tab { flex: 1; }
+  nav { order: 3; flex-basis: 100%; gap: 0; } .tab { flex: 1 1 0; min-width: 0; padding: 0 var(--space-2xs); font-size: var(--text-sm); }
+  .filters .segmented button { padding: 0 var(--space-2xs); font-size: var(--text-sm); white-space: nowrap; }
   .who { margin-left: auto; } .who-name, .who small { display: none; }
   .block { padding: var(--space-md); }
   .grid { grid-template-columns: minmax(0, 1fr); }
@@ -225,7 +227,8 @@ tr.inactive { opacity: 0.6; }
   table.items td::before, table.book td::before { content: attr(data-label); display: block; font-family: var(--font-body); font-variant-numeric: normal; font-size: var(--text-sm); color: var(--color-muted); margin-bottom: var(--space-3xs); }
   table.items td[data-label="Description"], table.items td[data-label="Own description"],
   table.book td[data-label="Customer"], table.book td[data-label="Number"],
-  table.book td[data-label="Login email"], table.book td[data-label="Owner email"], table.book .rowactions { grid-column: 1 / -1; }
+  table.book td[data-label="Login email"], table.book td[data-label="Owner email"], table.book td[data-label="Name"],
+  table.book td[data-label="Email"], table.book td[data-label="Person"], table.book .rowactions { grid-column: 1 / -1; }
   table.book td { overflow-wrap: anywhere; }
   table td.r { text-align: left; }
   table.items td.x { position: absolute; top: var(--space-xs); right: 0; } table.items td.x::before { display: none; }

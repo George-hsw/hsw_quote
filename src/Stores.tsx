@@ -115,7 +115,7 @@ export default function Stores({ stores, onChanged }: Props) {
           </tbody>
         </table>
       </div>
-      {pwStore && <PasswordDialog store={pwStore} onClose={() => setPwStore(null)} onDone={onChanged} />}
+      {pwStore && <PasswordDialog name={pwStore.name} email={pwStore.email} fn="set-store-password" body={{ store_id: pwStore.id }} onClose={() => setPwStore(null)} onDone={onChanged} />}
     </>
   )
 }

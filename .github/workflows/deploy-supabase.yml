@@ -35,3 +35,4 @@ jobs:
           supabase functions deploy record-payment --no-verify-jwt
           supabase functions deploy send-document --no-verify-jwt
           supabase functions deploy set-store-password --no-verify-jwt
+          supabase functions deploy manage-user --no-verify-jwt

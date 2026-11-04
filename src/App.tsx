@@ -3,11 +3,13 @@ import type { Session } from '@supabase/supabase-js'
 import Builder from './Builder'
 import Documents from './Documents'
 import Login from './Login'
+import Reports from './Reports'
 import Stores from './Stores'
+import Users from './Users'
 import { useToast } from './Toast'
-import { ADMIN_EMAIL, DEMO, demoStores, supabase, type DocRow, type StoreRow } from './lib/supabase'
+import { ADMIN_EMAIL, DEMO, demoStores, demoUsers, supabase, type AppUser, type DocRow, type Role, type StoreRow } from './lib/supabase'
 
-type Tab = 'new' | 'docs' | 'stores'
+type Tab = 'new' | 'docs' | 'reports' | 'stores' | 'users'
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined) // undefined = still checking
@@ -42,6 +44,7 @@ function Shell({ session }: { session: Session }) {
   const [openDoc, setOpenDoc] = useState<DocRow | null>(null)
   const [builderKey, setBuilderKey] = useState(0)
   const [refresh, setRefresh] = useState(0)
+  const [people, setPeople] = useState<AppUser[] | null>(null) // admin: everyone. manager: their store. staff: themselves
 
   const loadStores = useCallback(async () => {
     if (DEMO) return setAllStores(demoStores())
@@ -49,6 +52,19 @@ function Shell({ session }: { session: Session }) {
     setAllStores((data ?? []) as StoreRow[])
   }, [])
   useEffect(() => { loadStores() }, [loadStores])
+
+  const loadPeople = useCallback(async () => {
+    if (DEMO) return setPeople(demoUsers())
+    const { data } = await supabase!.from('app_users').select('*').order('full_name')
+    setPeople((data ?? []) as AppUser[])
+  }, [])
+  useEffect(() => { loadPeople() }, [loadPeople])
+
+  const me = (people ?? []).find((p) => p.user_id === session.user.id)
+  // A person has their own row; a shared store login (the original way) has none and sees the whole store.
+  const role: Role = isAdmin ? 'admin' : me?.role ?? 'store'
+  const sees = role !== 'staff' // admin, manager and shared store logins: reports, and who created what
+  const names = Object.fromEntries((people ?? []).map((p) => [p.email.toLowerCase(), p.full_name]))
 
   const active = (allStores ?? []).filter((s) => s.active)
   const go = (t: Tab) => { setTab(t); if (t === 'new') { setOpenDoc(null); setBuilderKey((k) => k + 1) } }
@@ -64,24 +80,30 @@ function Shell({ session }: { session: Session }) {
           <nav aria-label="Main">
             <button type="button" className="tab" aria-current={tab === 'new' ? 'page' : undefined} onClick={() => go('new')}>New</button>
             <button type="button" className="tab" aria-current={tab === 'docs' ? 'page' : undefined} onClick={() => go('docs')}>Documents</button>
+            {sees && <button type="button" className="tab" aria-current={tab === 'reports' ? 'page' : undefined} onClick={() => go('reports')}>Reports</button>}
             {isAdmin && <button type="button" className="tab" aria-current={tab === 'stores' ? 'page' : undefined} onClick={() => go('stores')}>Stores</button>}
+            {isAdmin && <button type="button" className="tab" aria-current={tab === 'users' ? 'page' : undefined} onClick={() => go('users')}>Users</button>}
           </nav>
           <div className="who">
-            <span><span className="who-name">{isAdmin ? 'Admin' : active[0]?.name ?? ''}</span><small>{email}</small></span>
+            <span><span className="who-name">{isAdmin ? 'Admin' : me?.full_name ?? active[0]?.name ?? ''}</span><small>{email}</small></span>
             <button type="button" className="quiet" onClick={() => (DEMO ? toast.info('Demo mode: there is no sign-in.') : supabase!.auth.signOut())}>Sign out</button>
           </div>
         </div>
       </header>
       <main className="container page">
-        {!allStores ? <p className="muted">Loading…</p>
+        {!allStores || !people ? <p className="muted">Loading…</p>
           : noAccess ? <p className="note bad">This email is not linked to an active store. Ask the admin ({ADMIN_EMAIL}).</p>
           : tab === 'new' ? (
             <Builder key={builderKey} email={email} isAdmin={isAdmin} stores={active} openDoc={openDoc}
               onSaved={() => setRefresh((r) => r + 1)} onNew={() => go('new')} />
           ) : tab === 'docs' ? (
-            <Documents isAdmin={isAdmin} refreshKey={refresh} onOpen={open} />
-          ) : isAdmin ? (
+            <Documents isAdmin={isAdmin} showBy={sees} names={names} refreshKey={refresh} onOpen={open} />
+          ) : tab === 'reports' && sees ? (
+            <Reports isAdmin={isAdmin} stores={allStores} names={names} />
+          ) : tab === 'stores' && isAdmin ? (
             <Stores stores={allStores} onChanged={loadStores} />
+          ) : tab === 'users' && isAdmin ? (
+            <Users users={people} stores={allStores} onChanged={loadPeople} />
           ) : null}
       </main>
     </>

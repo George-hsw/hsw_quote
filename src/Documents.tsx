@@ -5,6 +5,8 @@ import { DEMO, demoDocs, isoDate, supabase, type DocRow } from './lib/supabase'
 
 interface Props {
   isAdmin: boolean
+  showBy: boolean // managers and the admin see who created each document
+  names: Record<string, string> // creator email -> full name
   refreshKey: number
   onOpen: (d: DocRow) => void
 }
@@ -17,7 +19,7 @@ const TYPES: { value: string; label: string }[] = [
   { value: 'Tax Invoice', label: 'Invoices' },
 ]
 
-export default function Documents({ isAdmin, refreshKey, onOpen }: Props) {
+export default function Documents({ isAdmin, showBy, names, refreshKey, onOpen }: Props) {
   const toast = useToast()
   const [docs, setDocs] = useState<DocRow[] | null>(null)
   const [failed, setFailed] = useState('')
@@ -32,7 +34,7 @@ export default function Documents({ isAdmin, refreshKey, onOpen }: Props) {
     if (!supabase) return
     const { data, error } = await supabase
       .from('documents')
-      .select('id,store_id,doc_type,doc_number,customer_name,total_cents,due_date,status,created_at,payload,stores(name),payments(amount_cents,kind,paid_on)')
+      .select('id,store_id,doc_type,doc_number,customer_name,total_cents,due_date,status,created_by,created_at,payload,stores(name),payments(amount_cents,kind,paid_on)')
       .order('created_at', { ascending: false })
       .limit(300)
     if (error) {
@@ -93,7 +95,7 @@ export default function Documents({ isAdmin, refreshKey, onOpen }: Props) {
         <div className="tablewrap">
           <table className="book">
             <thead>
-              <tr><th>Number</th>{isAdmin && <th>Store</th>}<th>Customer</th><th className="r">Total</th><th className="r">Paid</th><th className="r">Balance</th><th>Due</th><th>Status</th><th><span className="visually-hidden">Actions</span></th></tr>
+              <tr><th>Number</th>{isAdmin && <th>Store</th>}<th>Customer</th>{showBy && <th>By</th>}<th className="r">Total</th><th className="r">Paid</th><th className="r">Balance</th><th>Due</th><th>Status</th><th><span className="visually-hidden">Actions</span></th></tr>
             </thead>
             <tbody>
               {shown.map((d) => {
@@ -106,6 +108,7 @@ export default function Documents({ isAdmin, refreshKey, onOpen }: Props) {
                     <td data-label="Number"><b className="num">{d.doc_number}</b><br /><small>{dateAU(new Date(d.created_at))}</small></td>
                     {isAdmin && <td data-label="Store">{d.stores?.name}</td>}
                     <td data-label="Customer">{d.customer_name}</td>
+                    {showBy && <td data-label="By">{names[(d.created_by ?? '').toLowerCase()] ?? d.created_by ?? '–'}</td>}
                     <td data-label="Total" className="r">{money(d.total_cents)}</td>
                     <td data-label="Paid" className="r">{inv ? money(paid) : '–'}</td>
                     <td data-label="Balance" className="r">{inv ? money(bal) : '–'}</td>

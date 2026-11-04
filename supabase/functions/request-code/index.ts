@@ -23,7 +23,11 @@ Deno.serve(async (req) => {
 
   let allowed = e === ADMIN_EMAIL
   if (!allowed) {
-    const { data } = await admin.from('stores').select('id').eq('active', true).ilike('email', e).limit(1)
+    const { data } = await admin.from('stores').select('id').eq('active', true).eq('email', e).limit(1)
+    allowed = !!data?.length
+  }
+  if (!allowed) {
+    const { data } = await admin.from('app_users').select('user_id').eq('active', true).eq('email', e).limit(1)
     allowed = !!data?.length
   }
   if (!allowed) return generic

@@ -2,7 +2,8 @@
 // store and replies going to the store, or to the store only so the store can forward it themselves.
 // Needs secrets: RESEND_API_KEY, MAIL_FROM (e.g. "HSW Quotes <quotes@hsw.com.au>", a Resend-verified domain).
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { ADMIN_EMAIL, cors, json } from '../_shared/cors.ts'
+import { cors, json } from '../_shared/cors.ts'
+import { accessOf, canActOnDoc } from '../_shared/access.ts'
 
 const MAX_PDF_BYTES = 3_000_000 // decoded size
 const HOURLY_LIMIT = 40 // sends per signed-in user per hour: this is not a bulk mailer
@@ -44,8 +45,8 @@ Deno.serve(async (req) => {
     const { data: doc } = await admin.from('documents').select('*, stores(*)').eq('id', b.document_id).single()
     if (!doc) return json({ error: 'Document not found. Save it first.' }, 404)
     const store = doc.stores
-    if (callerEmail !== ADMIN_EMAIL && callerEmail !== String(store.email ?? '').toLowerCase())
-      return json({ error: 'Not allowed for this store' }, 403)
+    if (!canActOnDoc(await accessOf(admin, u.user?.id, callerEmail), doc, callerEmail))
+      return json({ error: 'Not allowed for this document' }, 403)
 
     // Hourly limit per signed-in user
     const since = new Date(Date.now() - 3600_000).toISOString()
