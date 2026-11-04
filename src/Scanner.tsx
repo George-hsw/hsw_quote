@@ -87,6 +87,9 @@ export default function Scanner({ onScan, onClose, feedback, remote = false, onR
   return (
     <div className="scanner" role="dialog" aria-label="Barcode scanner">
       <video ref={videoRef} playsInline muted />
+      <button type="button" className="scan-x" aria-label="Close the scanner" onClick={onClose}>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
+      </button>
       {onRemote && (
         <label className="scan-top inline">
           <input type="checkbox" name="remote" checked={remote} onChange={(e) => onRemote(e.target.checked)} /> Send scans to my computer

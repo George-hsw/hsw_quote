@@ -5,6 +5,7 @@ import Documents from './Documents'
 import Login from './Login'
 import Reports from './Reports'
 import Stores from './Stores'
+import Tour from './Tour'
 import { useToast } from './Toast'
 import { ADMIN_EMAIL, DEMO, demoMembers, demoStores, demoUsers, supabase, type AppUser, type DocRow, type Member, type Role, type StoreRow } from './lib/supabase'
 
@@ -44,6 +45,12 @@ function Shell({ session }: { session: Session }) {
   const [builderKey, setBuilderKey] = useState(0)
   const [refresh, setRefresh] = useState(0)
   const [people, setPeople] = useState<AppUser[] | null>(null) // admin: everyone. manager: people in their stores. staff: themselves
+  const tourKey = `hsw-tour-v1:${email}`
+  const [tour, setTour] = useState(() => {
+    if (DEMO) return location.search.includes('tour')
+    try { return localStorage.getItem(tourKey) !== '1' } catch { return false }
+  }) // shown once, the first time someone signs in on this device
+  const closeTour = () => { setTour(false); try { localStorage.setItem(tourKey, '1') } catch { /* ignore */ } }
   const [members, setMembers] = useState<Member[]>([]) // who is in which store, and as what
 
   const loadStores = useCallback(async () => {
@@ -85,13 +92,14 @@ function Shell({ session }: { session: Session }) {
         <div className="container bar">
           <img className="logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Howards Storage World" width="120" height="32" />
           <nav aria-label="Main">
-            <button type="button" className="tab" aria-current={tab === 'new' ? 'page' : undefined} onClick={() => go('new')}>New</button>
-            <button type="button" className="tab" aria-current={tab === 'docs' ? 'page' : undefined} onClick={() => go('docs')}>Documents</button>
-            {sees && <button type="button" className="tab" aria-current={tab === 'reports' ? 'page' : undefined} onClick={() => go('reports')}>Reports</button>}
-            {isAdmin && <button type="button" className="tab" aria-current={tab === 'stores' ? 'page' : undefined} onClick={() => go('stores')}>Stores</button>}
+            <button type="button" className="tab" data-tour="new" aria-current={tab === 'new' ? 'page' : undefined} onClick={() => go('new')}>New</button>
+            <button type="button" className="tab" data-tour="docs" aria-current={tab === 'docs' ? 'page' : undefined} onClick={() => go('docs')}>Documents</button>
+            {sees && <button type="button" className="tab" data-tour="reports" aria-current={tab === 'reports' ? 'page' : undefined} onClick={() => go('reports')}>Reports</button>}
+            {isAdmin && <button type="button" className="tab" data-tour="stores" aria-current={tab === 'stores' ? 'page' : undefined} onClick={() => go('stores')}>Stores</button>}
           </nav>
           <div className="who">
             <span><span className="who-name">{isAdmin ? 'Admin' : me?.full_name ?? active[0]?.name ?? ''}</span><small>{email}</small></span>
+            <button type="button" className="quiet help" aria-label="Take the tour" title="Take the tour" onClick={() => setTour(true)}>?</button>
             <button type="button" className="quiet" onClick={() => (DEMO ? toast.info('Demo mode: there is no sign-in.') : supabase!.auth.signOut())}>Sign out</button>
           </div>
         </div>
@@ -110,6 +118,7 @@ function Shell({ session }: { session: Session }) {
             <Stores stores={allStores} people={people} members={members} onChanged={() => { loadStores(); loadPeople() }} />
           ) : null}
       </main>
+      {tour && allStores && people && <Tour isAdmin={isAdmin} manager={sees} onClose={closeTour} />}
     </>
   )
 }

@@ -6,6 +6,9 @@ Web version of `HSW_Quote_Invoice_Builder.xlsx`. Staff sign in with their store 
 Money rules match the workbook: prices include GST, GST = total ÷ 11, line = qty × price × (1 − disc%), blank qty = 1,
 numbers `Q-<STORE>-<n>` / `INV-<STORE>-<n>`, quote valid 30 days, invoice due 7 days (or a chosen date).
 
+## First-login tour
+The first time someone signs in on a device, a short animated tour (`src/Tour.tsx`) walks through New, scanning, sending the PDF and Documents, plus payments and reports for managers and stores and people for the admin. Next and Back move through it, Skip or the X closes it, and the ? at the top replays it. It is remembered per person per device in the browser, so a new device shows it once more.
+
 ## Scanning
 The camera scanner beeps on a good read and gives a lower double tone for a barcode that is not in the price list. On a phone, tick **Send scans to my computer** in the scanner: each scan is written to the `scans` table (migration `014_scans.sql`, readable only by that person) and the computer they are signed in on adds the item to the open quote, live, then deletes the row. If the computer was asleep, the scans are added when it opens the New screen again (within 12 hours). Phones on iOS play the sound through the ringer, so it is silent when the silent switch is on.
 
