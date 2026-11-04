@@ -302,3 +302,7 @@ tr.inactive { opacity: 0.6; }
 .confirm .modalbox { max-width: 420px; }
 .confirm-body p { margin: 0; color: var(--color-ink-2); }
 .btn.danger-fill { background: var(--color-error); border-color: var(--color-error); color: var(--color-paper); }
+
+/* Scanner: the switch that sends scans to the computer */
+.scan-top { position: absolute; top: calc(var(--space-md) + env(safe-area-inset-top)); left: var(--space-md); right: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--color-scrim); color: var(--color-paper-2); border-radius: var(--radius-entry); font-weight: 600; }
+@media (max-width: 44rem) { .desktop-only { display: none; } }

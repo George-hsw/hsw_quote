@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import defaultSettings from './data/settings.json'
 import { useConfirm } from './Confirm'
+import { beep, primeAudio } from './lib/beep'
+import { sendScan, useScanInbox } from './lib/scanSync'
 import EmailDialog from './EmailDialog'
 import Scanner from './Scanner'
 import { useToast } from './Toast'
@@ -54,6 +56,8 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   const [find, setFind] = useState('')
   const [scanning, setScanning] = useState(false)
   const [scanMsg, setScanMsg] = useState('')
+  const [remote, setRemote] = useState(() => { try { return localStorage.getItem('hsw-scan-remote') === '1' } catch { return false } }) // phone: send scans to the computer
+  const [inbox, setInbox] = useState<string[]>([]) // barcodes sent from the phone, waiting to be added
   const [busy, setBusy] = useState(false)
   const [logo, setLogo] = useState<Logo | null>(null)
   useEffect(() => { loadLogo().then(setLogo) }, [])
@@ -125,10 +129,36 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
     setLine(i, { code: it.code, qty: '1' })
     return `Added ${it.description}`
   }
-  const handleScan = (value: string) => {
+  const handleScan = async (value: string) => {
     const it = findByScan(value, itemIndex, barcodeIndex)
-    setScanMsg(it ? addItem(it) : `${value} – not in the price list`)
+    if (!it) { beep('miss'); setScanMsg(`${value} – not in the price list`); return }
+    if (remote) { // hand it to the computer; this device's own quote is left alone
+      const sent = await sendScan(value)
+      beep(sent ? 'ok' : 'miss')
+      setScanMsg(sent ? `Sent to your computer: ${it.description}` : 'Could not send to your computer. Check the connection.')
+      return
+    }
+    const msg = addItem(it)
+    beep(msg.startsWith('All') ? 'miss' : 'ok')
+    setScanMsg(msg)
   }
+  const setRemoteMode = (on: boolean) => {
+    setRemote(on)
+    try { localStorage.setItem('hsw-scan-remote', on ? '1' : '0') } catch { /* ignore */ }
+  }
+
+  // Scans sent from the phone arrive here, one at a time so each lands on the quote as it now stands.
+  useScanInbox(!!priceList && !locked, (code) => setInbox((q) => [...q, code]))
+  useEffect(() => {
+    if (inbox.length === 0) return
+    const [code, ...rest] = inbox
+    setInbox(rest)
+    const it = findByScan(code, itemIndex, barcodeIndex)
+    if (!it) { beep('miss'); toast.error(`From your phone: ${code} is not in the price list.`); return }
+    const msg = addItem(it)
+    beep(msg.startsWith('All') ? 'miss' : 'ok')
+    if (msg.startsWith('All')) toast.error(msg); else toast.success(`From your phone: ${msg}`)
+  }, [inbox])
   const addFromSearch = (it: Item) => {
     const msg = addItem(it)
     if (msg.startsWith('All')) toast.error(msg)
@@ -316,11 +346,12 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
                 <div className="findrow">
                   <input type="search" name="find" aria-label="Find an item" placeholder="Scan, or type a code, barcode or name…" value={find} enterKeyHint="search"
                     onChange={(e) => setFind(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && onFinderEnter()} />
-                  <button type="button" className="btn" onClick={() => { setScanMsg(''); setScanning(true) }}>
+                  <button type="button" className="btn" onClick={() => { primeAudio(); setScanMsg(''); setScanning(true) }}>
                     <svg className="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 8v8M12 8v8M16 8v8"/></svg>
                     Scan barcode
                   </button>
                 </div>
+                {!DEMO && <p className="muted desktop-only">Scan with your phone: sign in on it, tap Scan barcode, and switch on Send scans to my computer. Items appear here.</p>}
                 {matches.length > 0 && (
                   <ul className="results">
                     {matches.map((m) => (
@@ -446,7 +477,7 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
         />
       )}
       {confirmDialog}
-      {scanning && <Scanner onScan={handleScan} onClose={() => setScanning(false)} feedback={scanMsg} />}
+      {scanning && <Scanner onScan={handleScan} onClose={() => setScanning(false)} feedback={scanMsg} remote={remote} onRemote={DEMO ? undefined : setRemoteMode} />}
     </div>
   )
 }
