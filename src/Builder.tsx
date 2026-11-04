@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import defaultSettings from './data/settings.json'
+import { useConfirm } from './Confirm'
 import EmailDialog from './EmailDialog'
 import Scanner from './Scanner'
 import { useToast } from './Toast'
@@ -34,6 +35,7 @@ const normalise = (d: Partial<QuoteInput> | undefined): QuoteInput => {
 export default function Builder({ email, isAdmin, stores: storeRows, openDoc, onSaved, onNew }: Props) {
   const draftKey = `hsw-quote-draft:${email}`
   const toast = useToast()
+  const [ask, confirmDialog] = useConfirm()
   const [quote, setQuote] = useState<QuoteInput>(() => {
     if (openDoc) return normalise(openDoc.payload as QuoteInput)
     try {
@@ -242,8 +244,8 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
     return { fileName: `${c.fileName || 'quote'}.pdf`, blob: buildPdf(quoteEff, c, settings, logo).output('blob') }
   }
   const openEmail = () => (c.ready ? setEmailOpen(true) : showProblems())
-  const newQuote = () => {
-    if (!confirm('Clear this form and start a new one?')) return
+  const newQuote = async () => {
+    if (!(await ask({ title: 'Start a new one?', body: <p>This clears everything on the form.</p>, confirmLabel: 'Clear and start new' }))) return
     try { localStorage.removeItem(draftKey) } catch { /* ignore */ }
     onNew()
   }
@@ -443,6 +445,7 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
           onSend={sendEmail}
         />
       )}
+      {confirmDialog}
       {scanning && <Scanner onScan={handleScan} onClose={() => setScanning(false)} feedback={scanMsg} />}
     </div>
   )

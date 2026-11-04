@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useConfirm } from './Confirm'
 import PasswordDialog from './PasswordDialog'
 import { useToast } from './Toast'
 import { DEMO, MAX_STORES, ROLE_LABEL, supabase, type AppUser, type Member, type StoreRow } from './lib/supabase'
@@ -27,6 +28,7 @@ const PERMISSION: Record<Pick, string> = {
 /** One store, in a popup: who is in it and with what permission, and the store's details. Admin only. */
 export default function StorePanel({ store, stores, people, members, onClose, onChanged }: Props) {
   const toast = useToast()
+  const [ask, confirmDialog] = useConfirm()
   const [current, setCurrent] = useState<StoreRow | null>(store) // becomes the saved row once a new store is saved
   const [draft, setDraft] = useState<Draft>(store ? { ...store } : blank())
   const [busy, setBusy] = useState(false)
@@ -88,18 +90,31 @@ export default function StorePanel({ store, stores, people, members, onClose, on
     if (r.ok) { toast.success('Permission changed.'); onChanged() }
   }
   const setActive = async (p: AppUser, next: boolean) => {
-    if (!next && !window.confirm(`Stop ${p.full_name} signing in, in every store? Their documents stay. You can turn them back on later.`)) return
+    if (!next && !(await ask({
+      title: `Turn off ${p.full_name}?`,
+      body: <p>They won’t be able to sign in to any store. Their quotes and invoices stay, and you can turn them back on later.</p>,
+      confirmLabel: 'Turn off',
+    }))) return
     const r = await call({ action: 'update', user_id: p.user_id, active: next })
     if (r.ok) { toast.success(next ? `${p.full_name} can sign in again.` : `${p.full_name} can no longer sign in.`); onChanged() }
   }
   const removeFromStore = async (p: AppUser, m: Member) => {
-    if (!window.confirm(`Take ${p.full_name} out of ${current?.name}? They keep their login and any other stores.`)) return
+    if (!(await ask({
+      title: `Remove ${p.full_name} from ${current?.name}?`,
+      body: <p>They keep their login and any other stores. They just lose access to this one.</p>,
+      confirmLabel: 'Remove from store',
+    }))) return
     const r = await call({ action: 'remove', user_id: m.user_id, store_id: m.store_id })
     if (r.ok) { toast.success(`${p.full_name} removed from ${current?.name}.`); onChanged() }
   }
   const deleteUser = async (p: AppUser) => {
     const n = storesOf(p.user_id)
-    if (!window.confirm(`Delete ${p.full_name}? Their login is removed${n > 1 ? ` and they leave all ${n} stores` : ''}. The quotes and invoices they made stay. This cannot be undone.`)) return
+    if (!(await ask({
+      title: `Delete ${p.full_name}?`,
+      body: <p>Their login is removed{n > 1 ? ` and they leave all ${n} stores` : ''}. The quotes and invoices they made stay. This cannot be undone.</p>,
+      confirmLabel: 'Delete user',
+      danger: true,
+    }))) return
     const r = await call({ action: 'delete', user_id: p.user_id })
     if (r.ok) { toast.success(`${p.full_name} deleted.`); onChanged() }
   }
@@ -136,7 +151,12 @@ export default function StorePanel({ store, stores, people, members, onClose, on
 
   const deleteStore = async () => {
     if (!current || !supabase) return
-    if (!window.confirm(`Delete ${current.name}? This cannot be undone. A store that has quotes or invoices cannot be deleted; turn it off instead.`)) return
+    if (!(await ask({
+      title: `Delete ${current.name}?`,
+      body: <p>The store and its list of people are removed. This cannot be undone. A store that has quotes or invoices can’t be deleted: turn it off instead by unticking Active.</p>,
+      confirmLabel: 'Delete store',
+      danger: true,
+    }))) return
     const { error } = await supabase.from('stores').delete().eq('id', current.id)
     if (error) {
       toast.error(error.code === '23503'
@@ -239,6 +259,7 @@ export default function StorePanel({ store, stores, people, members, onClose, on
         </details>
       </div>
 
+      {confirmDialog}
       {creating && current && (
         <PasswordDialog name={creating.name} email={creating.email} fn="manage-user"
           body={{ action: 'add', store_id: current.id, email: creating.email, full_name: creating.name, role: creating.role }}

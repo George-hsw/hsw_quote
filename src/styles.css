@@ -259,3 +259,9 @@ tr.inactive { opacity: 0.6; }
   .person-actions select { flex: 1 1 100%; }
   .person-actions .btn { flex: 1 1 calc(50% - var(--space-xs)); }
 }
+
+/* In-app confirm dialog: sits above any popup it was opened from */
+.modal.confirm { z-index: calc(var(--z-modal) + 1); }
+.confirm .modalbox { max-width: 420px; }
+.confirm-body p { margin: 0; color: var(--color-ink-2); }
+.btn.danger-fill { background: var(--color-error); border-color: var(--color-error); color: var(--color-paper); }
