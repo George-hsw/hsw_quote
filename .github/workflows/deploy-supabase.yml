@@ -19,8 +19,8 @@ jobs:
         with:
           version: latest
       - run: supabase link --project-ref "$PROJECT_REF"
-      # Newer CLIs default to a local database; point it at the linked project. Older ones only know --linked.
-      - run: supabase db push --remote || supabase db push --linked
+      # The CLI defaults to a local database and asks before changing production: aim it at the linked project, answer yes.
+      - run: supabase db push --remote --yes
       - env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
