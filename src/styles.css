@@ -149,7 +149,7 @@ td.x .btn:hover { color: var(--color-error); }
 /* Documents and stores: the book as an index */
 .book { background: var(--color-paper-2); border-top: var(--rule-hair) solid var(--color-ink); }
 .book td { padding: var(--space-md) var(--space-sm); }
-.book tbody tr:hover td { background: var(--color-paper); }
+@media (hover: hover) { .book tbody tr:hover td { background: var(--color-paper); } }
 .rowactions { text-align: right; white-space: nowrap; }
 .rowactions .btn { min-height: 36px; }
 .rowactions .btn + .btn { margin-left: var(--space-xs); }
@@ -233,6 +233,7 @@ tr.inactive { opacity: 0.6; }
   table.book td[data-label="Store email"], table.book td[data-label="Managers"], table.book td[data-label="Name"],
   table.book td[data-label="Email"], table.book td[data-label="Person"], table.book .rowactions { grid-column: 1 / -1; }
   table.book td { overflow-wrap: anywhere; }
+  .book tbody tr:hover td { background: none; } /* a tap leaves :hover stuck; on a phone the row is a card, not cells */
   table td.r { text-align: left; }
   table.items td.x { position: absolute; top: var(--space-xs); right: 0; } table.items td.x::before { display: none; }
   .rowactions { display: flex; gap: var(--space-xs); } .rowactions .btn { flex: 1; } .rowactions .btn + .btn { margin-left: 0; }
