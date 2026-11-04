@@ -303,15 +303,12 @@ tr.inactive { opacity: 0.6; }
 .confirm-body p { margin: 0; color: var(--color-ink-2); }
 .btn.danger-fill { background: var(--color-error); border-color: var(--color-error); color: var(--color-paper); }
 
-/* Scanner: the switch that sends scans to the computer */
-.scan-top { position: absolute; top: calc(var(--space-md) + env(safe-area-inset-top)); left: var(--space-md); right: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--color-scrim); color: var(--color-paper-2); border-radius: var(--radius-entry); font-weight: 600; }
 @media (max-width: 44rem) { .desktop-only { display: none; } }
 
 /* Scanner: Done and the message sit clear of the phone browser's bottom bar; a second close at the top right */
 .scan-close { bottom: calc(var(--space-lg) + env(safe-area-inset-bottom) + 64px); z-index: 2; touch-action: manipulation; }
 .scan-msg { bottom: calc(var(--space-lg) + env(safe-area-inset-bottom) + 128px); pointer-events: none; }
 .scan-x { position: absolute; top: calc(var(--space-md) + env(safe-area-inset-top)); right: var(--space-md); z-index: 2; width: var(--hit); height: var(--hit); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-scrim); color: var(--color-paper-2); touch-action: manipulation; }
-.scan-top { right: calc(var(--space-md) + var(--hit) + var(--space-xs)); }
 
 /* First-login tour */
 .quiet.help { min-width: var(--hit); font-weight: 700; }

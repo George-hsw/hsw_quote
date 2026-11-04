@@ -7,10 +7,10 @@ Money rules match the workbook: prices include GST, GST = total ÷ 11, line = qt
 numbers `Q-<STORE>-<n>` / `INV-<STORE>-<n>`, quote valid 30 days, invoice due 7 days (or a chosen date).
 
 ## First-login tour
-The first time someone signs in on a device, a short animated tour (`src/Tour.tsx`) walks through New, scanning, sending the PDF and Documents, plus payments and reports for managers and stores and people for the admin. Next and Back move through it, Skip or the X closes it, and the ? at the top replays it. It is remembered per person per device in the browser, so a new device shows it once more.
+The first time someone signs in to their account, a short animated tour () walks through New, scanning, sending the PDF and Documents, plus payments and reports for managers and stores and people for the admin. Next and Back move through it, Skip or the X closes it, and the ? at the top replays it. The account remembers it (Supabase ), so a new phone or browser does not show it again.
 
-## Scanning
-The camera scanner beeps on a good read and gives a lower double tone for a barcode that is not in the price list. On a phone, tick **Send scans to my computer** in the scanner: each scan is written to the `scans` table (migration `014_scans.sql`, readable only by that person) and the computer they are signed in on adds the item to the open quote, live, then deletes the row. If the computer was asleep, the scans are added when it opens the New screen again (within 12 hours). Phones on iOS play the sound through the ringer, so it is silent when the silent switch is on.
+## Scanning and the live draft
+The camera scanner beeps on a good read and gives a lower double tone for a barcode that is not in the price list. The quote being built (not yet saved) is one **live draft per person**: every device signed in as that person shares it (, migration , Supabase Realtime). Scan on the phone and the item shows on the computer a moment later; delete a line on either and it goes from both. If both are edited at once the changes are merged field by field ( in ), so typing a customer name on the computer does not lose a scan from the phone. Saving the quote, or Clear form, removes the draft everywhere. A saved document being edited is not shared live. iPhones play the sound through the ringer, so it is silent when the silent switch is on.
 
 ## Who can do what
 Everything about people happens on the **Stores** tab: open a store and a popup lists who is in it, lets you add someone, change their permission, reset their password, turn them off, take them out of the store, or delete them.

@@ -45,12 +45,18 @@ function Shell({ session }: { session: Session }) {
   const [builderKey, setBuilderKey] = useState(0)
   const [refresh, setRefresh] = useState(0)
   const [people, setPeople] = useState<AppUser[] | null>(null) // admin: everyone. manager: people in their stores. staff: themselves
+  // Shown once per account, the first time someone signs in. The account remembers it (user_metadata), so a new phone or
+  // browser does not show it again; the browser copy covers accounts that finished it before this existed.
   const tourKey = `hsw-tour-v1:${email}`
-  const [tour, setTour] = useState(() => {
-    if (DEMO) return location.search.includes('tour')
-    try { return localStorage.getItem(tourKey) !== '1' } catch { return false }
-  }) // shown once, the first time someone signs in on this device
-  const closeTour = () => { setTour(false); try { localStorage.setItem(tourKey, '1') } catch { /* ignore */ } }
+  const seenOnAccount = session.user.user_metadata?.tour_seen === true
+  const seenOnDevice = (() => { try { return localStorage.getItem(tourKey) === '1' } catch { return false } })()
+  const [tour, setTour] = useState(() => (DEMO ? location.search.includes('tour') : !(seenOnAccount || seenOnDevice)))
+  const markSeen = useCallback(() => {
+    try { localStorage.setItem(tourKey, '1') } catch { /* ignore */ }
+    if (!DEMO && supabase) void supabase.auth.updateUser({ data: { tour_seen: true } })
+  }, [tourKey])
+  const closeTour = () => { setTour(false); if (!seenOnAccount) markSeen() }
+  useEffect(() => { if (seenOnDevice && !seenOnAccount) markSeen() }, [seenOnDevice, seenOnAccount, markSeen])
   const [members, setMembers] = useState<Member[]>([]) // who is in which store, and as what
 
   const loadStores = useCallback(async () => {

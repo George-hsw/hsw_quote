@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import defaultSettings from './data/settings.json'
 import { useConfirm } from './Confirm'
 import { beep, primeAudio } from './lib/beep'
-import { sendScan, useScanInbox } from './lib/scanSync'
+import { clearRemoteDraft, useDraftSync } from './lib/draftSync'
 import EmailDialog from './EmailDialog'
 import Scanner from './Scanner'
 import { useToast } from './Toast'
@@ -56,8 +56,6 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   const [find, setFind] = useState('')
   const [scanning, setScanning] = useState(false)
   const [scanMsg, setScanMsg] = useState('')
-  const [remote, setRemote] = useState(() => { try { return localStorage.getItem('hsw-scan-remote') === '1' } catch { return false } }) // phone: send scans to the computer
-  const [inbox, setInbox] = useState<string[]>([]) // barcodes sent from the phone, waiting to be added
   const [busy, setBusy] = useState(false)
   const [logo, setLogo] = useState<Logo | null>(null)
   useEffect(() => { loadLogo().then(setLogo) }, [])
@@ -65,8 +63,10 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   useEffect(() => { loadPriceList().then(setPriceList).catch((e) => toast.error(`Could not load the price list. ${e.message ?? e}`)) }, [])
   useEffect(() => {
     if (docId || openDoc) return
-    try { localStorage.setItem(draftKey, JSON.stringify(quote)) } catch { /* ignore */ }
+    try { localStorage.setItem(draftKey, JSON.stringify(quote)); localStorage.setItem(`${draftKey}:at`, String(Date.now())) } catch { /* ignore */ }
   }, [quote, docId, openDoc, draftKey])
+  // The unsaved quote is shared live with the same person's other devices: a scan on the phone shows on the computer, and a line deleted on one goes from both.
+  useDraftSync({ enabled: !docId && !openDoc && !DEMO, quote, setQuote, normalise, draftKey })
 
   // A store login can only ever use its own store.
   useEffect(() => {
@@ -129,36 +129,13 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
     setLine(i, { code: it.code, qty: '1' })
     return `Added ${it.description}`
   }
-  const handleScan = async (value: string) => {
+  const handleScan = (value: string) => {
     const it = findByScan(value, itemIndex, barcodeIndex)
     if (!it) { beep('miss'); setScanMsg(`${value} – not in the price list`); return }
-    if (remote) { // hand it to the computer; this device's own quote is left alone
-      const sent = await sendScan(value)
-      beep(sent ? 'ok' : 'miss')
-      setScanMsg(sent ? `Sent to your computer: ${it.description}` : 'Could not send to your computer. Check the connection.')
-      return
-    }
     const msg = addItem(it)
     beep(msg.startsWith('All') ? 'miss' : 'ok')
     setScanMsg(msg)
   }
-  const setRemoteMode = (on: boolean) => {
-    setRemote(on)
-    try { localStorage.setItem('hsw-scan-remote', on ? '1' : '0') } catch { /* ignore */ }
-  }
-
-  // Scans sent from the phone arrive here, one at a time so each lands on the quote as it now stands.
-  useScanInbox(!!priceList && !locked, (code) => setInbox((q) => [...q, code]))
-  useEffect(() => {
-    if (inbox.length === 0) return
-    const [code, ...rest] = inbox
-    setInbox(rest)
-    const it = findByScan(code, itemIndex, barcodeIndex)
-    if (!it) { beep('miss'); toast.error(`From your phone: ${code} is not in the price list.`); return }
-    const msg = addItem(it)
-    beep(msg.startsWith('All') ? 'miss' : 'ok')
-    if (msg.startsWith('All')) toast.error(msg); else toast.success(`From your phone: ${msg}`)
-  }, [inbox])
   const addFromSearch = (it: Item) => {
     const msg = addItem(it)
     if (msg.startsWith('All')) toast.error(msg)
@@ -201,7 +178,8 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
     }
     docIdRef.current = data.id
     setDocId(data.id); setSavedType(quote.docType)
-    try { localStorage.removeItem(draftKey) } catch { /* ignore */ }
+    try { localStorage.removeItem(draftKey); localStorage.removeItem(`${draftKey}:at`) } catch { /* ignore */ }
+    void clearRemoteDraft()
     toast.success(`Saved ${c.docNumber}.`)
     onSaved()
     return true
@@ -276,7 +254,8 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
   const openEmail = () => (c.ready ? setEmailOpen(true) : showProblems())
   const newQuote = async () => {
     if (!(await ask({ title: 'Start a new one?', body: <p>This clears everything on the form.</p>, confirmLabel: 'Clear and start new' }))) return
-    try { localStorage.removeItem(draftKey) } catch { /* ignore */ }
+    try { localStorage.removeItem(draftKey); localStorage.removeItem(`${draftKey}:at`) } catch { /* ignore */ }
+    void clearRemoteDraft()
     onNew()
   }
 
@@ -351,7 +330,7 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
                     Scan barcode
                   </button>
                 </div>
-                {!DEMO && <p className="muted desktop-only">Scan with your phone: sign in on it, tap Scan barcode, and switch on Send scans to my computer. Items appear here.</p>}
+                {!DEMO && <p className="muted desktop-only">Scan with your phone: sign in on it and tap Scan barcode. Items appear here at the same time, and a line you delete on either device goes from both.</p>}
                 {matches.length > 0 && (
                   <ul className="results">
                     {matches.map((m) => (
@@ -477,7 +456,7 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, on
         />
       )}
       {confirmDialog}
-      {scanning && <Scanner onScan={handleScan} onClose={() => setScanning(false)} feedback={scanMsg} remote={remote} onRemote={DEMO ? undefined : setRemoteMode} />}
+      {scanning && <Scanner onScan={handleScan} onClose={() => setScanning(false)} feedback={scanMsg} />}
     </div>
   )
 }

@@ -5,8 +5,6 @@ interface Props {
   onScan: (value: string) => void // return after each successful read; scanner stays open
   onClose: () => void
   feedback: string // last result message shown over the video
-  remote?: boolean // scans go to the person's computer instead of this device's quote
-  onRemote?: (on: boolean) => void // when given, the scanner shows the switch
 }
 
 type BarcodeDetectorLike = { detect(v: HTMLVideoElement): Promise<{ rawValue: string }[]> }
@@ -19,7 +17,7 @@ declare global {
 const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code']
 
 /** Full-screen camera scanner. Native BarcodeDetector where available (Chrome/Android), ZXing elsewhere (iOS Safari). */
-export default function Scanner({ onScan, onClose, feedback, remote = false, onRemote }: Props) {
+export default function Scanner({ onScan, onClose, feedback }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const toast = useToast()
   const [error, setError] = useState('')
@@ -90,11 +88,6 @@ export default function Scanner({ onScan, onClose, feedback, remote = false, onR
       <button type="button" className="scan-x" aria-label="Close the scanner" onClick={onClose}>
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
       </button>
-      {onRemote && (
-        <label className="scan-top inline">
-          <input type="checkbox" name="remote" checked={remote} onChange={(e) => onRemote(e.target.checked)} /> Send scans to my computer
-        </label>
-      )}
       <div className="reticle" />
       <div className="scan-msg">{error ? <span className="bad">{error}</span> : feedback || 'Point the camera at a barcode'}</div>
       <button type="button" className="btn primary scan-close" onClick={onClose}>Done</button>
