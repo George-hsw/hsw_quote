@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useConfirm } from './Confirm'
 import { useToast } from './Toast'
 import { dateAU, money, parseDate } from './lib/quote'
 import { DEMO, demoDocs, isoDate, supabase, type DocRow } from './lib/supabase'
@@ -22,12 +23,32 @@ const TYPES: { value: string; label: string }[] = [
 
 export default function Documents({ isAdmin, showBy, canPay, names, refreshKey, onOpen }: Props) {
   const toast = useToast()
+  const [ask, confirmDialog] = useConfirm()
   const [docs, setDocs] = useState<DocRow[] | null>(null)
   const [failed, setFailed] = useState('')
   const [filter, setFilter] = useState('')
   const [type, setType] = useState('')
   const [storeFilter, setStoreFilter] = useState('')
   const [paying, setPaying] = useState<DocRow | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  /** Quotes only. A tax invoice is a tax record, so it is never deleted from here. */
+  const deleteQuote = async (d: DocRow) => {
+    if (!(await ask({
+      title: `Delete quote ${d.doc_number}?`,
+      body: <p>The quote for {d.customer_name} ({money(d.total_cents)}) is removed for good. This cannot be undone.</p>,
+      confirmLabel: 'Delete quote',
+      danger: true,
+    }))) return
+    if (DEMO) { toast.info('Demo mode: nothing was deleted.'); return }
+    if (!supabase) return
+    setDeleting(d.id)
+    const { data, error } = await supabase.from('documents').delete().eq('id', d.id).select('id')
+    setDeleting(null)
+    if (error || !data?.length) { toast.error('Could not delete that quote. You can only delete quotes you are allowed to see.'); return }
+    toast.success(`Quote ${d.doc_number} deleted.`)
+    load()
+  }
 
   const load = useCallback(async () => {
     setFailed('')
@@ -118,6 +139,7 @@ export default function Documents({ isAdmin, showBy, canPay, names, refreshKey, 
                     <td className="rowactions">
                       <button type="button" className="btn" onClick={() => onOpen(d)}>{inv && paid > 0 ? 'View' : 'Open'}</button>
                       {inv && bal > 0 && d.status !== 'void' && canPay(d.store_id) && <button type="button" className="btn primary" onClick={() => setPaying(d)}>Record payment</button>}
+                      {!inv && <button type="button" className="btn danger" disabled={deleting === d.id} onClick={() => deleteQuote(d)}>{deleting === d.id ? 'Deleting…' : 'Delete'}</button>}
                     </td>
                   </tr>
                 )
@@ -126,6 +148,7 @@ export default function Documents({ isAdmin, showBy, canPay, names, refreshKey, 
           </table>
         </div>
       )}
+      {confirmDialog}
       {paying && <PaymentDialog doc={paying} onClose={() => setPaying(null)} onDone={() => { setPaying(null); load() }} />}
     </>
   )

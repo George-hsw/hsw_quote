@@ -13,6 +13,8 @@ Everything about people happens on the **Stores** tab: open a store and a popup 
 |---|---|---|---|
 | Sign in | own email + password | own email + password | own email + password |
 | Quotes / invoices | make them; see and edit only their own | see and edit **all** at the store | all stores |
+| Delete a quote | their own | any at the store | any |
+| Delete a tax invoice | no | no | only one with no payments |
 | Record payment / deposit | no | yes, at the store | any store |
 | Reports (by person) | no | yes, for the store | any store or all |
 | Add or delete people and stores, reset passwords | no | no | yes |
