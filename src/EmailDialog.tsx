@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface Prepared { fileName: string; blob: Blob }
 
@@ -49,11 +49,7 @@ export default function EmailDialog({
 
   const toOk = EMAIL.test(to.trim())
   const ready = !!prepared && toOk
-  const file = useMemo(() => (prepared ? new File([prepared.blob], prepared.fileName, { type: 'application/pdf' }) : null), [prepared])
-  const canShareFile = !!file && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })
-  const canShareAny = typeof navigator.share === 'function'
 
-  const outlookHref = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(to.trim())}&subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text)}`
   const mailtoHref = `mailto:${to.trim()}?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(text.replace(/\n/g, '\r\n'))}`
 
   const downloadPdf = () => {
@@ -70,18 +66,6 @@ export default function EmailDialog({
     if (!ready) { e.preventDefault(); return }
     if (!alreadyDownloaded) downloadPdf()
   }
-  const share = async () => {
-    if (!file) return
-    try {
-      if (canShareFile) await navigator.share({ files: [file], title: subj, text })
-      else {
-        // this browser can share text but not files: download the PDF so it can be attached, then share the words
-        if (!alreadyDownloaded) downloadPdf()
-        await navigator.share({ title: subj, text })
-      }
-    } catch { /* the user closed the share sheet */ }
-  }
-
   const appValid = appTo === 'customer' ? EMAIL.test(to.trim()) : !!storeEmail
   const sendFromApp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,6 +79,9 @@ export default function EmailDialog({
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="email-title">
       <div className="modalbox wide">
+        <button type="button" className="modal-x" aria-label="Close" onClick={onClose} disabled={busy}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+        </button>
         <h2 id="email-title">Email {docLabel}</h2>
         <div className="segmented" role="group" aria-label="How to send">
           <button type="button" aria-pressed={mode === 'mine'} onClick={() => setMode('mine')}>From my email</button>
@@ -119,18 +106,12 @@ export default function EmailDialog({
                 ? 'Saving the document and preparing the PDF…'
                 : alreadyDownloaded
                   ? `The PDF is downloaded as ${prepared.fileName}. Attach it to the email.`
-                  : `Opening the email also downloads the PDF as ${prepared.fileName}. Attach it to the email.`}
+                  : `Opening the email, in Outlook or your mail app, also downloads the PDF as ${prepared.fileName}. Attach it to the email.`}
             </p>
-            {canShareAny && <p className="muted">Choose an email app lists the email apps on this device, such as Outlook or Gmail, and passes the subject, message and PDF to the one you pick.</p>}
             {!toOk && to.trim() !== '' && <p className="bad">That email address is not valid.</p>}
             <div className="actions" style={{ marginTop: 'var(--space-md)' }}>
-              {canShareAny && (
-                <button type="button" className={'btn primary' + (prepared ? '' : ' blocked')} aria-disabled={!prepared} onClick={() => prepared && share()}>Choose an email app</button>
-              )}
-              <a className={'btn' + (canShareAny ? '' : ' primary') + (ready ? '' : ' blocked')} href={outlookHref} target="_blank" rel="noopener noreferrer" aria-disabled={!ready} onClick={launch}>Open in Outlook</a>
-              <a className={'btn' + (ready ? '' : ' blocked')} href={mailtoHref} aria-disabled={!ready} onClick={launch}>Open in email app</a>
+              <a className={'btn primary' + (ready ? '' : ' blocked')} href={mailtoHref} aria-disabled={!ready} onClick={launch}>Open in email</a>
               <button type="button" className="btn" onClick={downloadPdf} disabled={!prepared}>Download PDF</button>
-              <button type="button" className="quiet" onClick={onClose}>Close</button>
             </div>
           </div>
         ) : (
@@ -158,7 +139,6 @@ export default function EmailDialog({
             </p>
             {appTo === 'store' && !storeEmail && <p className="bad">This store has no email set. Ask the admin to add it.</p>}
             <div className="actions" style={{ marginTop: 'var(--space-md)' }}>
-              <button type="button" className="btn" onClick={onClose} disabled={busy}>Cancel</button>
               <button type="submit" className="btn primary" disabled={!appValid || busy}>{busy ? 'Sending…' : 'Send from the app'}</button>
             </div>
           </form>

@@ -176,7 +176,10 @@ tr.inactive { opacity: 0.6; }
 .login .otp { font-family: var(--font-outlier); font-size: var(--text-2xl); letter-spacing: 0.4em; text-align: center; padding-left: 0.4em; }
 .modal { position: fixed; inset: 0; background: var(--color-scrim); z-index: var(--z-modal); display: flex; align-items: center; justify-content: center; padding: var(--space-md); }
 .modalbox { background: var(--color-paper-2); width: 100%; max-width: 480px; max-height: 92svh; overflow: auto; padding: var(--space-lg); border-radius: var(--radius-entry); box-shadow: 0 0 0 1px var(--color-ink), var(--shadow-lift); }
-.modalbox h2 { margin-bottom: var(--space-sm); max-width: none; }
+.modalbox { position: relative; }
+.modal-x { position: absolute; top: var(--space-sm); right: var(--space-sm); width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; background: none; border-radius: var(--radius-pill); color: var(--color-ink-2); }
+.modal-x:hover { background: var(--color-paper-3); color: var(--color-ink); }
+.modalbox h2 { margin-bottom: var(--space-sm); max-width: none; padding-right: var(--space-xl); }
 .modalbox.wide { max-width: 560px; }
 .modalbox .grid { margin: var(--space-md) 0; }
 .modalbox .actions { justify-content: flex-end; margin-top: var(--space-md); }
