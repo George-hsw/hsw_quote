@@ -71,7 +71,7 @@ export default function Stores({ stores, onChanged }: Props) {
           <form onSubmit={save}>
             <div className="grid">
               {f('name', 'Store name', { required: true })}
-              {f('code', 'Code, 2 to 4 letters', { required: true, pattern: '[A-Za-z]{2,4}', maxLength: 4 })}
+              {f('code', 'Store code, 2 to 6 letters or digits', { required: true, pattern: '[A-Za-z0-9]{2,6}', maxLength: 6 })}
               {f('email', 'Store login email', { type: 'email' })}
               {f('owner_email', 'Franchise owner email', { type: 'email' })}
               {f('phone', 'Phone', { type: 'tel' })}
