@@ -22,7 +22,7 @@ interface Props {
   isAdmin: boolean
   stores: StoreRow[] // active stores this user may use (one for a store login, all for admin)
   openDoc: DocRow | null // a saved document to edit, or null for a new one
-  canPay: (storeId: string) => boolean // taking a deposit or payment is for managers and the admin
+  canPay: (storeId: string) => boolean // anyone in the store, and the admin, can record a deposit or payment
   onSaved: () => void
   onNew: () => void // reset to a fresh builder
 }

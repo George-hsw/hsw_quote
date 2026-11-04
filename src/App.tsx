@@ -83,8 +83,8 @@ function Shell({ session }: { session: Session }) {
   const roleIn = (storeId: string): Role =>
     isAdmin ? 'admin' : members.find((m) => m.user_id === session.user.id && m.store_id === storeId)?.role ?? 'manager'
   const multi = isAdmin || active.length > 1 // may pick the store, and sees more than one store's documents
-  const sees = isAdmin || active.some((s) => roleIn(s.id) === 'manager') // reports, and who created what
-  const canPay = (storeId: string) => roleIn(storeId) !== 'staff' // taking payments is for managers and the admin
+  const sees = isAdmin || active.length > 0 // reports, and who created what: everyone works with their whole store
+  const canPay = (storeId: string) => isAdmin || active.some((s) => s.id === storeId) // anyone in the store can take a deposit or payment
   const names = Object.fromEntries((people ?? []).map((p) => [p.email.toLowerCase(), p.full_name]))
 
   const go = (t: Tab) => { setTab(t); if (t === 'new') { setOpenDoc(null); setBuilderKey((k) => k + 1) } }

@@ -27,18 +27,14 @@ export async function accessOf(admin: SupabaseClient, userId: string | undefined
 
 type Doc = { store_id: string; created_by: string | null }
 
-/** Admin: any document. Manager: any document in their store. Staff: only the ones they created. */
-export function canActOnDoc(a: Access | null, doc: Doc, email: string): boolean {
-  if (!a) return false
-  if (a.admin) return true
-  const role = a.stores[doc.store_id]
-  if (role === 'manager') return true
-  return role === 'staff' && String(doc.created_by ?? '').toLowerCase() === email
+/** Admin: any document. Manager and Store: any document in their own store. */
+export function canActOnDoc(a: Access | null, doc: Doc, _email: string): boolean {
+  return !!a && (a.admin || !!a.stores[doc.store_id])
 }
 
-/** Recording a payment is for managers and the admin. Staff can make and send documents but not take money. */
+/** Anyone who works in the store, and the admin, can record a deposit or payment on its documents. */
 export function canTakePayment(a: Access | null, doc: Doc): boolean {
-  return !!a && (a.admin || a.stores[doc.store_id] === 'manager')
+  return !!a && (a.admin || !!a.stores[doc.store_id])
 }
 
 /** The people who run a store: its active managers. Payment notices and copies go to them, so there is no separate owner email to keep in step. */

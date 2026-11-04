@@ -8,7 +8,7 @@ import { DEMO, demoDocs, isoDate, supabase, type DocRow } from './lib/supabase'
 interface Props {
   isAdmin: boolean
   showBy: boolean // managers and the admin see who created each document
-  canPay: (storeId: string) => boolean // recording a payment is for managers and the admin
+  canPay: (storeId: string) => boolean // anyone in the store, and the admin, can record a deposit or payment
   names: Record<string, string> // creator email -> full name
   refreshKey: number
   onOpen: (d: DocRow) => void

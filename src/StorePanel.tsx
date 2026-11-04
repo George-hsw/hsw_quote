@@ -21,8 +21,8 @@ const blank = (): Draft => ({
 
 type Pick = 'manager' | 'staff'
 const PERMISSION: Record<Pick, string> = {
-  manager: 'Manager: whole store, payments, reports',
-  staff: 'Store: their own quotes and invoices',
+  manager: 'Manager: whole store, and gets its payment emails',
+  staff: 'Store: whole store (quotes, payments, reports)',
 }
 
 /** One store, in a popup: who is in it and with what permission, and the store's details. Admin only. */

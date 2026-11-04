@@ -21,16 +21,16 @@ Everything about people happens on the **Stores** tab: open a store and a popup 
 | | Store | Manager | Admin (`george.mridun@hsw.com.au`) |
 |---|---|---|---|
 | Sign in | own email + password | own email + password | own email + password |
-| Quotes / invoices | make them; see and edit only their own | see and edit **all** at the store | all stores |
-| Delete a quote | their own | any at the store | any |
+| Quotes / invoices | see, make and edit **all** at the store | see, make and edit **all** at the store | all stores |
+| Delete a quote | any at the store (without a deposit) | any at the store (without a deposit) | any |
 | Delete a tax invoice | no | no | only one with no payments |
-| Record payment / deposit | no | yes, at the store | any store |
-| Reports (by person) | no | yes, for the store | any store or all |
+| Record payment / deposit | yes, at the store | yes, at the store | any store |
+| Reports (by person) | yes, for the store | yes, for the store | any store or all |
 | Add or delete people and stores, reset passwords | no | no | yes |
 
-One person has one login and can be in several stores, with a different permission in each (add the same email to another store and they get it without a new password). Only the admin is built in; everyone else is a Manager or Store in each store they belong to. Every document shows who created it. **Turn off** stops someone signing in straight away without deleting their documents; **Delete user** removes the login but the quotes and invoices they made stay. A store with quotes or invoices cannot be deleted, only turned off. A store's managers receive its payment notices and a copy of what it sends. There is no emailed sign-in code: anyone stuck contacts support@hsw.com.au and the admin resets their password from the store popup.
+One person has one login and can be in several stores, with a different permission in each (add the same email to another store and they get it without a new password). Only the admin is built in; everyone else is a Manager or Store in each store they belong to. Store and Manager have the same access inside their store; the only difference is that a Manager is the store's owner for email. Every document shows who created it. **Turn off** stops someone signing in straight away without deleting their documents; **Delete user** removes the login but the quotes and invoices they made stay. A store with quotes or invoices cannot be deleted, only turned off. A store's managers receive its payment notices and a copy of what it sends. There is no emailed sign-in code: anyone stuck contacts support@hsw.com.au and the admin resets their password from the store popup.
 
-Enforced by Row Level Security (`supabase/migrations/002_*.sql`, `012_store_members.sql`), not just the UI, and again in the `record-payment` and `send-document` functions (`_shared/access.ts`). Payments can only be written by the `record-payment` function. Once an invoice has a payment it is frozen. Who created a document never changes when someone else edits it.
+Enforced by Row Level Security (`supabase/migrations/002_*.sql`, `012_store_members.sql`, `017_store_full_access.sql`), not just the UI, and again in the `record-payment` and `send-document` functions (`_shared/access.ts`). Payments can only be written by the `record-payment` function. Once an invoice has a payment it is frozen. Who created a document never changes when someone else edits it.
 
 ## Data flow
 ```
