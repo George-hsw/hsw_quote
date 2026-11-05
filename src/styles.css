@@ -2,6 +2,7 @@
  * paper: oklch(96% 0.011 85) · accent: oklch(60.7% 0.107 214) · display: Myriad Pro · body: Myriad Pro
  * nav: top bar with segmented tabs · signature: the ruled ledger, live totals beside the form · states: loading, empty, error, full
  * axes: light/grotesk-sans/chromatic-teal · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · dismissed F4 · .btn.danger-fill is the red confirm button in the delete popups only, so each screen still has one filled primary */
 /* Hallmark · waive 28b · live camera feed in the scanner overlay, a MediaStream with no still to use as a poster · the video is the camera, never a file */
 /* Hallmark · dropped onChange={(e) => setType(e.target.value)} · the Documents type select became a segmented control (All, Quotes, Invoices) that sets the same type state from its buttons */
 /* Hallmark · reworded "Delivery & installation (incl GST, leave blank if not needed)" to "Delivery & installation" with the hint kept as small text beside it · the hint left the heading, the words are unchanged */
@@ -34,6 +35,7 @@ nav { display: flex; gap: var(--space-2xs); flex: 1; }
 .tab { border: 0; background: none; min-height: var(--hit); padding: 0 var(--space-md); border-radius: var(--radius-pill); font-weight: 600; color: var(--color-ink-2); cursor: pointer; transition: background var(--dur-micro) var(--ease-out); }
 .tab:hover { background: var(--color-paper-3); }
 .tab[aria-current="page"] { background: var(--color-accent); color: var(--color-accent-ink); }
+.who .quiet { white-space: nowrap; }
 .who { display: flex; align-items: center; gap: var(--space-md); text-align: right; line-height: 1.25; }
 .who-name { display: block; font-weight: 600; }
 .page { padding-block: var(--space-lg) var(--space-2xl); }
@@ -322,7 +324,7 @@ tr.inactive { opacity: 0.6; }
 .scan-x { position: absolute; top: calc(var(--space-md) + env(safe-area-inset-top)); right: var(--space-md); z-index: 2; width: var(--hit); height: var(--hit); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--color-scrim); color: var(--color-paper-2); touch-action: manipulation; }
 
 /* First-login tour */
-.quiet.help { min-width: var(--hit); font-weight: 700; }
+.quiet.help { min-width: var(--hit); }
 .tab { position: relative; }
 .tab.tour-hit::after { content: ''; position: absolute; inset: -4px; border: 2px solid var(--color-link); border-radius: var(--radius-card); pointer-events: none; animation: tour-pulse 1.4s ease-out infinite; }
 .tour { position: fixed; inset: 0; z-index: var(--z-modal); display: flex; align-items: flex-end; justify-content: center; padding: var(--space-md) var(--space-md) calc(var(--space-md) + env(safe-area-inset-bottom)); }

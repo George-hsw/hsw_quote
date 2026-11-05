@@ -323,10 +323,10 @@ export default function Builder({ email, isAdmin, stores: storeRows, openDoc, ca
                     {storeRows.map((s) => <option key={s.id}>{s.name}</option>)}
                   </select>
                 </label>
-                <label>Number <small>e.g. 1001</small>
+                <label>Number <small>digits only, e.g. 1001</small>
                   <input name="number" inputMode="numeric" value={quote.number} onChange={(e) => set('number', e.target.value)} />
                 </label>
-                <label>Document no.<input readOnly value={c.docNumber} /></label>
+                <label>Document no. <small>made from the number</small><input readOnly value={c.docNumber} /></label>
                 <label>Date
                   <input name="date" type="date" value={quote.date} onChange={(e) => set('date', e.target.value)} />
                 </label>

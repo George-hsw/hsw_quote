@@ -105,7 +105,7 @@ function Shell({ session }: { session: Session }) {
           </nav>
           <div className="who">
             <span><span className="who-name">{isAdmin ? 'Admin' : me?.full_name ?? active[0]?.name ?? ''}</span><small>{email}</small></span>
-            <button type="button" className="quiet help" aria-label="Take the tour" title="Take the tour" onClick={() => setTour(true)}>?</button>
+            <button type="button" className="quiet help" title="Replay the tour" onClick={() => setTour(true)}>Tour</button>
             <button type="button" className="quiet" onClick={() => (DEMO ? toast.info('Demo mode: there is no sign-in.') : supabase!.auth.signOut())}>Sign out</button>
           </div>
         </div>
